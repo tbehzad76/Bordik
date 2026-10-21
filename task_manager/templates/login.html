@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}ورود | مدیریت وظایف{% endblock %}
+{% block content %}
+<div class="auth-layout">
+  <section class="card auth-card">
+    <p class="eyebrow">خوش آمدید</p>
+    <h1>ورود به حساب</h1>
+    <p class="muted">با شماره همراه و رمز عبور وارد شوید.</p>
+
+    {% if error %}
+    <div class="alert alert-error" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <form class="stack" method="post" action="/login">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="field">
+        <label for="phone">شماره همراه</label>
+        <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel"
+               value="{{ phone }}" placeholder="09121234567" required maxlength="30">
+      </div>
+      <div class="field">
+        <label for="password">رمز عبور</label>
+        <input id="password" name="password" type="password" autocomplete="current-password"
+               placeholder="رمز عبور" required maxlength="128">
+      </div>
+      <button class="btn btn-primary btn-block" type="submit">ورود</button>
+    </form>
+
+    <p class="switch">حساب ندارید؟ <a href="/register">ثبت‌نام کنید</a></p>
+  </section>
+
+  <aside class="auth-aside">
+    <div>
+      <span class="aside-badge">کار تیمی</span>
+      <h2>پروژه بسازید و به همکاران وظیفه بدهید</h2>
+      <p>هر عضو می‌تواند کارت بسازد و برای دیگران مسئول تعیین کند.</p>
+    </div>
+    <ul class="feature-list">
+      <li>برد پروژه با ستون‌های قابل جابه‌جایی</li>
+      <li>عضویت با شماره همراه، بدون نیاز به پیامک</li>
+      <li>ورود امن با JWT و کوکی HttpOnly</li>
+    </ul>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,472 @@
+import re
+
+from tests.conftest import api_register
+
+DEFAULT_PHONE = "09120000001"
+DEFAULT_PASSWORD = "password123"
+
+
+def extract_csrf(html: str) -> str:
+    match = re.search(r'name="csrf_token" value="([^"]+)"', html)
+    assert match is not None, "CSRF token not found"
+    return match.group(1)
+
+
+def register_via_ui(
+    client,
+    phone=DEFAULT_PHONE,
+    full_name="UI User",
+    password=DEFAULT_PASSWORD,
+    expect_status=303,
+):
+    page = client.get("/register")
+    assert page.status_code == 200
+    token = extract_csrf(page.text)
+    response = client.post(
+        "/register",
+        data={
+            "full_name": full_name,
+            "phone": phone,
+            "password": password,
+            "password_confirm": password,
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == expect_status, response.text
+    return response
+
+
+def login_via_ui(client, phone=DEFAULT_PHONE, password=DEFAULT_PASSWORD):
+    page = client.get("/login")
+    token = extract_csrf(page.text)
+    response = client.post(
+        "/login",
+        data={"phone": phone, "password": password, "csrf_token": token},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    return response
+
+
+def create_project_via_ui(client, name="UI Project", description="Board"):
+    page = client.get("/projects")
+    token = extract_csrf(page.text)
+    response = client.post(
+        "/projects",
+        data={"name": name, "description": description, "csrf_token": token},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    return int(response.headers["location"].rsplit("/", 1)[-1])
+
+
+def test_pages_require_login(client):
+    root = client.get("/", follow_redirects=False)
+    projects = client.get("/projects", follow_redirects=False)
+
+    assert root.status_code == 303
+    assert root.headers["location"] == "/login"
+    assert projects.status_code == 303
+    assert projects.headers["location"] == "/login"
+
+
+def test_login_page_has_security_headers_and_csrf(client):
+    response = client.get("/login")
+
+    assert response.status_code == 200
+    assert "شماره همراه" in response.text
+    assert "csrf_token" in response.cookies
+    assert "script-src 'self'" in response.headers["content-security-policy"]
+    assert "font-src 'self'" in response.headers["content-security-policy"]
+    assert response.headers["x-frame-options"] == "DENY"
+    assert response.headers["cache-control"] == "no-store"
+
+
+def test_register_logs_user_in(client):
+    response = register_via_ui(client)
+    cookie = response.headers.get("set-cookie", "")
+
+    assert "access_token=" in cookie
+    assert "HttpOnly" in cookie
+    assert "SameSite=lax" in cookie
+
+    page = client.get("/projects")
+    assert page.status_code == 200
+    assert "UI User" in page.text
+
+
+def test_register_validation_errors(client):
+    page = client.get("/register")
+    token = extract_csrf(page.text)
+    mismatch = client.post(
+        "/register",
+        data={
+            "full_name": "UI User",
+            "phone": "09120000001",
+            "password": "one-password",
+            "password_confirm": "other-password",
+            "csrf_token": token,
+        },
+    )
+    assert mismatch.status_code == 200
+    assert "یکسان نیستند" in mismatch.text
+
+    invalid_phone = client.post(
+        "/register",
+        data={
+            "full_name": "UI User",
+            "phone": "abc",
+            "password": DEFAULT_PASSWORD,
+            "password_confirm": DEFAULT_PASSWORD,
+            "csrf_token": token,
+        },
+    )
+    assert invalid_phone.status_code == 200
+    assert "معتبر نیست" in invalid_phone.text
+
+    register_via_ui(client)
+    duplicate = register_via_ui(client, expect_status=200)
+    assert "از قبل وجود دارد" in duplicate.text
+
+
+def test_login_success_and_generic_error(client):
+    register_via_ui(client)
+    token = extract_csrf(client.get("/projects").text)
+    client.post("/logout", data={"csrf_token": token}, follow_redirects=False)
+
+    page = client.get("/login")
+    token = extract_csrf(page.text)
+    wrong = client.post(
+        "/login",
+        data={
+            "phone": DEFAULT_PHONE,
+            "password": "wrong-password",
+            "csrf_token": token,
+        },
+    )
+    assert wrong.status_code == 200
+    assert "نادرست است" in wrong.text
+
+    token = extract_csrf(wrong.text)
+    good = client.post(
+        "/login",
+        data={
+            "phone": DEFAULT_PHONE,
+            "password": DEFAULT_PASSWORD,
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert good.status_code == 303
+    assert good.headers["location"] == "/projects"
+
+
+def test_csrf_token_is_required(client):
+    page = client.get("/login")
+    extract_csrf(page.text)
+    rejected = client.post(
+        "/login",
+        data={
+            "phone": DEFAULT_PHONE,
+            "password": DEFAULT_PASSWORD,
+            "csrf_token": "invalid-token",
+        },
+    )
+    assert rejected.status_code == 403
+
+
+def test_project_board_flow(client):
+    register_via_ui(client)
+    project_id = create_project_via_ui(client, name="Company Board")
+
+    board = client.get(f"/projects/{project_id}")
+    assert board.status_code == 200
+    assert "Company Board" in board.text
+    assert board.text.count('data-column-id="') == 3
+
+    token = extract_csrf(board.text)
+    column_id = int(re.search(r'data-column-id="(\d+)"', board.text).group(1))
+    created = client.post(
+        f"/projects/{project_id}/cards",
+        data={
+            "title": "First board card",
+            "description": "Some details",
+            "column_id": str(column_id),
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert created.status_code == 303
+
+    board = client.get(f"/projects/{project_id}")
+    assert "First board card" in board.text
+    card_id = int(re.search(r'data-card-id="(\d+)"', board.text).group(1))
+
+    card_page = client.get(f"/projects/{project_id}/cards/{card_id}")
+    assert card_page.status_code == 200
+    assert "First board card" in card_page.text
+
+    edited = client.post(
+        f"/projects/{project_id}/cards/{card_id}/edit",
+        data={
+            "title": "Edited card",
+            "description": "Updated",
+            "column_id": str(column_id),
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert edited.status_code == 303
+    assert "Edited card" in client.get(f"/projects/{project_id}").text
+
+
+def test_add_member_and_invitation_via_ui(client):
+    register_via_ui(client, phone="09120000001", full_name="Owner User")
+    project_id = create_project_via_ui(client)
+    api_register(client, phone="09120000002", full_name="Member User")
+
+    board = client.get(f"/projects/{project_id}")
+    token = extract_csrf(board.text)
+    added = client.post(
+        f"/projects/{project_id}/members",
+        data={"phone": "09120000002", "csrf_token": token},
+        follow_redirects=False,
+    )
+    assert added.status_code == 303
+    assert "Member User" in client.get(f"/projects/{project_id}").text
+
+    invited = client.post(
+        f"/projects/{project_id}/members",
+        data={"phone": "09120000003", "csrf_token": token},
+        follow_redirects=False,
+    )
+    assert invited.status_code == 303
+    assert "+989120000003" in client.get(f"/projects/{project_id}").text
+
+    api_register(client, phone="09120000003", full_name="Invited User")
+    assert "Invited User" in client.get(f"/projects/{project_id}").text
+
+
+def test_member_can_open_board_but_outsider_cannot(client):
+    register_via_ui(client, phone="09120000001", full_name="Owner User")
+    project_id = create_project_via_ui(client)
+    api_register(client, phone="09120000002", full_name="Member User")
+    board = client.get(f"/projects/{project_id}")
+    token = extract_csrf(board.text)
+    client.post(
+        f"/projects/{project_id}/members",
+        data={"phone": "09120000002", "csrf_token": token},
+        follow_redirects=False,
+    )
+
+    client.post("/logout", data={"csrf_token": token}, follow_redirects=False)
+    register_via_ui(client, phone="09120000002", full_name="Member User", expect_status=200)
+    token = extract_csrf(client.get("/login").text)
+    client.post(
+        "/login",
+        data={
+            "phone": "09120000002",
+            "password": DEFAULT_PASSWORD,
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert client.get(f"/projects/{project_id}").status_code == 200
+
+    client.post("/logout", data={"csrf_token": extract_csrf(client.get("/projects").text)}, follow_redirects=False)
+    register_via_ui(client, phone="09120000009", full_name="Outsider")
+    outsider = client.get(f"/projects/{project_id}", follow_redirects=False)
+    assert outsider.status_code == 303
+    assert outsider.headers["location"] == "/projects"
+
+
+def test_drag_and_drop_move_endpoint(client):
+    register_via_ui(client)
+    project_id = create_project_via_ui(client)
+    board = client.get(f"/projects/{project_id}")
+    token = extract_csrf(board.text)
+    column_id = int(re.search(r'data-column-id="(\d+)"', board.text).group(1))
+    client.post(
+        f"/projects/{project_id}/cards",
+        data={"title": "Draggable", "column_id": str(column_id), "csrf_token": token},
+        follow_redirects=False,
+    )
+    board = client.get(f"/projects/{project_id}")
+    card_id = int(re.search(r'data-card-id="(\d+)"', board.text).group(1))
+    column_ids = [int(value) for value in re.findall(r'data-column-id="(\d+)"', board.text)]
+
+    moved = client.post(
+        f"/projects/{project_id}/cards/{card_id}/move",
+        json={"column_id": column_ids[-1], "position": 0},
+        headers={"X-CSRF-Token": token},
+    )
+    assert moved.status_code == 200
+    assert moved.json() == {"ok": True}
+
+    rejected = client.post(
+        f"/projects/{project_id}/cards/{card_id}/move",
+        json={"column_id": column_ids[0], "position": 0},
+        headers={"X-CSRF-Token": "bad-token"},
+    )
+    assert rejected.status_code == 403
+
+
+def test_ui_isolation_between_users(client):
+    register_via_ui(client, phone="09120000001", full_name="First")
+    project_id = create_project_via_ui(client)
+    board = client.get(f"/projects/{project_id}")
+    token = extract_csrf(board.text)
+    column_id = int(re.search(r'data-column-id="(\d+)"', board.text).group(1))
+    client.post(
+        f"/projects/{project_id}/cards",
+        data={"title": "Private", "column_id": str(column_id), "csrf_token": token},
+        follow_redirects=False,
+    )
+    card_id = int(re.search(r'data-card-id="(\d+)"', client.get(f"/projects/{project_id}").text).group(1))
+
+    client.post("/logout", data={"csrf_token": token}, follow_redirects=False)
+    register_via_ui(client, phone="09120000002", full_name="Second")
+    other_token = extract_csrf(client.get("/projects").text)
+    response = client.post(
+        f"/projects/{project_id}/cards/{card_id}/move",
+        json={"column_id": column_id, "position": 0},
+        headers={"X-CSRF-Token": other_token},
+    )
+    assert response.status_code == 404
+
+
+def test_logout_clears_session(client):
+    register_via_ui(client)
+    token = extract_csrf(client.get("/projects").text)
+    response = client.post("/logout", data={"csrf_token": token}, follow_redirects=False)
+
+    assert response.status_code == 303
+    assert "access_token" not in client.cookies
+    assert client.get("/projects", follow_redirects=False).status_code == 303
+
+
+def test_html_is_escaped(client):
+    register_via_ui(client)
+    project_id = create_project_via_ui(client)
+    board = client.get(f"/projects/{project_id}")
+    token = extract_csrf(board.text)
+    payload = '<script>alert("xss")</script>'
+    client.post(
+        f"/projects/{project_id}/cards",
+        data={"title": payload, "csrf_token": token},
+        follow_redirects=False,
+    )
+    page = client.get(f"/projects/{project_id}")
+
+    assert payload not in page.text
+    assert "&lt;script&gt;" in page.text
+
+
+def test_api_does_not_accept_ui_cookie(client):
+    register_via_ui(client)
+
+    assert client.get("/api/projects").status_code == 401
+
+
+def test_static_assets_are_served(client):
+    css = client.get("/static/style.css")
+    js = client.get("/static/board.js")
+    font = client.get("/static/fonts/Vazirmatn-Regular.ttf")
+
+    assert css.status_code == 200
+    assert "text/css" in css.headers["content-type"]
+    assert "Vazirmatn" in css.text
+    assert "overflow-x: auto" not in css.text.split(".board {")[1].split("}")[0]
+    assert js.status_code == 200
+    assert "javascript" in js.headers["content-type"]
+    assert font.status_code == 200
+    assert len(font.content) > 1000
+
+
+def test_card_due_date_via_ui(client):
+    register_via_ui(client)
+    project_id = create_project_via_ui(client)
+    board = client.get(f"/projects/{project_id}")
+    token = extract_csrf(board.text)
+    column_id = int(re.search(r'data-column-id="(\d+)"', board.text).group(1))
+
+    created = client.post(
+        f"/projects/{project_id}/cards",
+        data={
+            "title": "Timed card",
+            "column_id": str(column_id),
+            "due_in_days": "4",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert created.status_code == 303
+    assert "روز مانده" in client.get(f"/projects/{project_id}").text
+
+    card_id = int(
+        re.search(
+            r'data-card-id="(\d+)"', client.get(f"/projects/{project_id}").text
+        ).group(1)
+    )
+    card = client.get(f"/projects/{project_id}/cards/{card_id}")
+    assert 'name="due_date"' in card.text
+    assert 'name="due_in_days"' in card.text
+
+    edited = client.post(
+        f"/projects/{project_id}/cards/{card_id}/edit",
+        data={
+            "title": "Timed card",
+            "column_id": str(column_id),
+            "due_date": "2030-05-01",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert edited.status_code == 303
+    assert "2030/05/01" in client.get(
+        f"/projects/{project_id}/cards/{card_id}"
+    ).text
+
+
+def test_only_creator_can_delete_via_ui(client):
+    register_via_ui(client, phone="09120000001", full_name="Owner User")
+    project_id = create_project_via_ui(client)
+    board = client.get(f"/projects/{project_id}")
+    token = extract_csrf(board.text)
+    column_id = int(re.search(r'data-column-id="(\d+)"', board.text).group(1))
+    client.post(
+        f"/projects/{project_id}/cards",
+        data={"title": "Owner card", "column_id": str(column_id), "csrf_token": token},
+        follow_redirects=False,
+    )
+    card_id = int(
+        re.search(
+            r'data-card-id="(\d+)"', client.get(f"/projects/{project_id}").text
+        ).group(1)
+    )
+
+    api_register(client, phone="09120000002", full_name="Member User")
+    client.post(
+        f"/projects/{project_id}/members",
+        data={"phone": "09120000002", "csrf_token": token},
+        follow_redirects=False,
+    )
+
+    client.post("/logout", data={"csrf_token": token}, follow_redirects=False)
+    login_via_ui(client, phone="09120000002")
+    member_token = extract_csrf(client.get(f"/projects/{project_id}").text)
+
+    card_page = client.get(f"/projects/{project_id}/cards/{card_id}")
+    assert card_page.status_code == 200
+    assert "فقط سازنده" in card_page.text
+
+    attempt = client.post(
+        f"/projects/{project_id}/cards/{card_id}/delete",
+        data={"csrf_token": member_token},
+        follow_redirects=False,
+    )
+    assert attempt.status_code == 303
+    assert (
+        client.get(f"/projects/{project_id}/cards/{card_id}").status_code == 200
+    )

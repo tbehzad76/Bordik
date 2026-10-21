@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}{{ card.title }} | {{ project.name }}{% endblock %}
+{% block content %}
+<section class="board-head">
+  <div>
+    <a class="back-link" href="/projects/{{ project.id }}">بازگشت به برد {{ project.name }}</a>
+    <h1>{{ card.title }}</h1>
+    <p class="muted">
+      ستون فعلی:
+      {% for column in columns %}{% if column.id == card.column_id %}{{ column.name }}{% endif %}{% endfor %}
+    </p>
+  </div>
+</section>
+
+<div class="card-detail">
+  <section class="card side-card">
+    <h2>ویرایش کارت</h2>
+    <form class="stack" method="post"
+          action="/projects/{{ project.id }}/cards/{{ card.id }}/edit">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="field">
+        <label for="card-title">عنوان</label>
+        <input id="card-title" name="title" type="text" value="{{ card.title }}"
+               required maxlength="200">
+      </div>
+      <div class="field">
+        <label for="card-description">توضیحات</label>
+        <textarea id="card-description" name="description" rows="6"
+                  maxlength="5000">{{ card.description or "" }}</textarea>
+      </div>
+      <div class="field">
+        <label for="card-column">ستون</label>
+        <select id="card-column" name="column_id" required>
+          {% for column in columns %}
+          <option value="{{ column.id }}" {% if column.id == card.column_id %}selected{% endif %}>
+            {{ column.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="due-fields">
+        <div class="field">
+          <label for="card-due-date">تاریخ سررسید</label>
+          <input id="card-due-date" name="due_date" type="date"
+                 value="{{ card.due_date.isoformat() if card.due_date else '' }}">
+        </div>
+        <div class="field">
+          <label for="card-due-days">یا تعداد روز</label>
+          <input id="card-due-days" name="due_in_days" type="number"
+                 min="0" max="3650" placeholder="مثلاً ۳">
+        </div>
+      </div>
+      {% if card.due_date %}
+      <p class="muted due-summary">
+        سررسید فعلی: {{ card.due_date.strftime("%Y/%m/%d") }}
+        {% set days = (card.due_date - today).days %}
+        ({% if days < 0 %}{{ -days }} روز تأخیر{% elif days == 0 %}امروز{% else %}{{ days }} روز مانده{% endif %})
+      </p>
+      <label class="check-line">
+        <input type="checkbox" name="clear_due">
+        <span>حذف سررسید</span>
+      </label>
+      {% endif %}
+      <fieldset class="field assignee-field">
+        <legend>مسئولان کارت</legend>
+        {% if members %}
+        <div class="assignee-list">
+          {% for member in members %}
+          <label class="check-line">
+            <input type="checkbox" name="assignee_ids" value="{{ member.user_id }}"
+                   {% if member.user_id in card.assignees | map(attribute='id') | list %}checked{% endif %}>
+            <span>{{ member.user.full_name }} <span dir="ltr" class="muted">{{ member.user.phone }}</span></span>
+          </label>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="muted">هنوز عضوی به پروژه اضافه نشده است.</p>
+        {% endif %}
+      </fieldset>
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">ذخیره تغییرات</button>
+      </div>
+    </form>
+  </section>
+
+  <aside class="card side-card">
+    <h2>جزئیات</h2>
+    <dl class="detail-list">
+      <dt>شناسه کارت</dt>
+      <dd>{{ card.id }}</dd>
+      <dt>ساخته‌شده</dt>
+      <dd>{{ card.created_at.strftime("%Y/%m/%d %H:%M") }}</dd>
+      <dt>آخرین ویرایش</dt>
+      <dd>{{ card.updated_at.strftime("%Y/%m/%d %H:%M") }}</dd>
+    </dl>
+    {% if can_delete %}
+    <form method="post" action="/projects/{{ project.id }}/cards/{{ card.id }}/delete">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="btn btn-danger btn-block" type="submit">حذف کارت</button>
+    </form>
+    {% else %}
+    <p class="muted">فقط سازنده این کارت می‌تواند آن را حذف کند.</p>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

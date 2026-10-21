@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}پروژه‌ها | مدیریت وظایف{% endblock %}
+{% block content %}
+<section class="tasks-hero">
+  <div>
+    <p class="eyebrow">پروژه‌ها</p>
+    <h1>پروژه‌های من</h1>
+    <p class="muted">پروژه بسازید و کارهای تیم را در برد مشترک مدیریت کنید.</p>
+  </div>
+</section>
+
+<form class="card task-form" method="post" action="/projects">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="task-form-grid">
+    <div class="field">
+      <label for="project-name">نام پروژه</label>
+      <input id="project-name" name="name" type="text" placeholder="مثلاً پروژه سایت شرکت"
+             required maxlength="120" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="project-description">توضیحات <span class="optional">(اختیاری)</span></label>
+      <textarea id="project-description" name="description" rows="2"
+                placeholder="هدف پروژه..." maxlength="2000"></textarea>
+    </div>
+  </div>
+  <button class="btn btn-primary" type="submit">ساخت پروژه</button>
+</form>
+
+{% if project_rows %}
+<div class="project-grid">
+  {% for row in project_rows %}
+  <a class="card project-card" href="/projects/{{ row.project.id }}">
+    <div class="project-card-head">
+      <h2>{{ row.project.name }}</h2>
+      <span class="badge {% if row.role == 'owner' %}badge-owner{% endif %}">
+        {% if row.role == "owner" %}مالک{% else %}عضو{% endif %}
+      </span>
+    </div>
+    {% if row.project.description %}
+    <p class="muted project-description">{{ row.project.description }}</p>
+    {% endif %}
+    <div class="project-card-foot">
+      <span>{{ row.card_count }} کارت</span>
+      <span>ساخت: {{ row.project.created_at.strftime("%Y/%m/%d") }}</span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card empty-state">
+  <span class="empty-mark" aria-hidden="true"></span>
+  <h2>هنوز پروژه‌ای ندارید</h2>
+  <p class="muted">اولین پروژه را از فرم بالا بسازید یا منتظر دعوت همکاران بمانید.</p>
+</div>
+{% endif %}
+{% endblock %}

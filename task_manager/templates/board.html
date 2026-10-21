@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} | مدیریت وظایف{% endblock %}
+{% block head_extra %}<meta name="csrf-token" content="{{ csrf_token }}">{% endblock %}
+{% block content %}
+<section class="board-head">
+  <div>
+    <a class="back-link" href="/projects">بازگشت به پروژه‌ها</a>
+    <h1>{{ project.name }}</h1>
+    {% if project.description %}
+    <p class="muted">{{ project.description }}</p>
+    {% endif %}
+  </div>
+  {% if is_owner %}
+  <details class="edit-panel head-edit">
+    <summary class="btn btn-ghost btn-small">تنظیمات پروژه</summary>
+    <form class="edit-form" method="post" action="/projects/{{ project.id }}/edit">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="field">
+        <label for="project-edit-name">نام پروژه</label>
+        <input id="project-edit-name" name="name" type="text" value="{{ project.name }}"
+               required maxlength="120">
+      </div>
+      <div class="field">
+        <label for="project-edit-description">توضیحات</label>
+        <textarea id="project-edit-description" name="description" rows="3"
+                  maxlength="2000">{{ project.description or "" }}</textarea>
+      </div>
+      <button class="btn btn-primary btn-small" type="submit">ذخیره</button>
+    </form>
+  </details>
+  {% endif %}
+</section>
+
+<div class="board-layout">
+  <div class="board" data-board data-project-id="{{ project.id }}">
+    {% for column in columns %}
+    <section class="board-column" data-column-id="{{ column.id }}">
+      <header class="board-column-head">
+        <div class="board-column-title">
+          <h2>{{ column.name }}</h2>
+          {% if column.is_done %}<span class="badge badge-success">پایان</span>{% endif %}
+          <span class="column-count">{{ column.cards|length }}</span>
+        </div>
+        {% if is_owner %}
+        <details class="edit-panel column-menu">
+          <summary class="icon-btn" title="ویرایش ستون">⋯</summary>
+          <div class="edit-form">
+            <form class="stack" method="post"
+                  action="/projects/{{ project.id }}/columns/{{ column.id }}/edit">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <div class="field">
+                <label for="column-name-{{ column.id }}">نام ستون</label>
+                <input id="column-name-{{ column.id }}" name="name" type="text"
+                       value="{{ column.name }}" required maxlength="60">
+              </div>
+              <label class="check-line">
+                <input type="checkbox" name="is_done" {% if column.is_done %}checked{% endif %}>
+                <span>ستون انجام‌شده</span>
+              </label>
+              <button class="btn btn-primary btn-small" type="submit">ذخیره</button>
+            </form>
+            <form method="post"
+                  action="/projects/{{ project.id }}/columns/{{ column.id }}/delete">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button class="btn btn-danger btn-small" type="submit">حذف ستون</button>
+            </form>
+          </div>
+        </details>
+        {% endif %}
+      </header>
+
+      <div class="card-list" data-card-list>
+        {% for card in column.cards %}
+        <article class="card card-mini" data-card-id="{{ card.id }}">
+          <a class="card-mini-title" href="/projects/{{ project.id }}/cards/{{ card.id }}">
+            {{ card.title }}
+          </a>
+          {% if card.due_date %}
+          {% set days = (card.due_date - today).days %}
+          <span class="due-badge {% if days < 0 %}is-overdue{% elif days <= 2 %}is-soon{% endif %}">
+            {% if days < 0 %}{{ -days }} روز تأخیر{% elif days == 0 %}امروز{% elif days == 1 %}فردا{% else %}{{ days }} روز مانده{% endif %}
+          </span>
+          {% endif %}
+          {% if card.description %}
+          <p class="card-mini-desc">{{ card.description }}</p>
+          {% endif %}
+          {% if card.assignees %}
+          <div class="avatars">
+            {% for assignee in card.assignees %}
+            <span class="avatar" title="{{ assignee.full_name }}">{{ assignee.full_name[:1] }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </article>
+        {% endfor %}
+      </div>
+
+      <form class="add-card-form" method="post" action="/projects/{{ project.id }}/cards">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="column_id" value="{{ column.id }}">
+        <input name="title" type="text" placeholder="افزودن کارت..." required
+               maxlength="200" autocomplete="off">
+        <button class="btn btn-ghost btn-small" type="submit">افزودن</button>
+      </form>
+    </section>
+    {% endfor %}
+
+    {% if is_owner %}
+    <section class="board-column board-column-new">
+      <h2>ستون جدید</h2>
+      <form class="stack" method="post" action="/projects/{{ project.id }}/columns">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input name="name" type="text" placeholder="نام ستون" required maxlength="60">
+        <button class="btn btn-primary btn-small" type="submit">افزودن ستون</button>
+      </form>
+    </section>
+    {% endif %}
+  </div>
+
+  <aside class="board-side">
+    <section class="card side-card">
+      <h2>اعضای پروژه ({{ members|length }})</h2>
+      <ul class="member-list">
+        {% for member in members %}
+        <li class="member-row">
+          <span class="avatar">{{ member.user.full_name[:1] }}</span>
+          <div class="member-info">
+            <strong>{{ member.user.full_name }}</strong>
+            <span dir="ltr">{{ member.user.phone }}</span>
+          </div>
+          <span class="badge {% if member.role == 'owner' %}badge-owner{% endif %}">
+            {% if member.role == "owner" %}مالک{% else %}عضو{% endif %}
+          </span>
+          {% if is_owner and member.role != "owner" %}
+          <form method="post"
+                action="/projects/{{ project.id }}/members/{{ member.user_id }}/remove">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-danger btn-small" type="submit">حذف</button>
+          </form>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+
+      {% if is_owner %}
+      <form class="stack add-member-form" method="post"
+            action="/projects/{{ project.id }}/members">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="field">
+          <label for="member-phone">افزودن عضو با شماره همراه</label>
+          <input id="member-phone" name="phone" type="tel" inputmode="tel"
+                 placeholder="09121234567" required maxlength="30">
+        </div>
+        <button class="btn btn-primary btn-small" type="submit">افزودن عضو</button>
+      </form>
+      {% endif %}
+    </section>
+
+    {% if is_owner and invitations %}
+    <section class="card side-card">
+      <h2>دعوت‌های در انتظار</h2>
+      <ul class="member-list">
+        {% for invitation in invitations %}
+        <li class="member-row">
+          <div class="member-info">
+            <strong dir="ltr">{{ invitation.phone }}</strong>
+            <span>پس از ثبت‌نام عضو می‌شود</span>
+          </div>
+          <form method="post"
+                action="/projects/{{ project.id }}/invitations/{{ invitation.id }}/cancel">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-ghost btn-small" type="submit">لغو</button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', path='/board.js') }}" defer></script>
+{% endblock %}
