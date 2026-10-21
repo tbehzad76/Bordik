@@ -323,6 +323,18 @@ docker compose exec app alembic current
 - روی ویندوز اگر پورت اشغال بود: `netstat -ano | findstr :8000`.
 - داده‌ها با `docker compose down` می‌مانند و فقط `docker compose down -v` آن‌ها را پاک می‌کند.
 
+#### اگر build در مرحلهٔ pip شکست خورد
+
+لاگ کامل را ببین:
+```bash
+docker compose build --no-cache --progress=plain app
+```
+دلیل رایج، دسترسی‌نداشتن کانتینر build به PyPI است (اغلب به‌خاطر پروکسی). در **Docker Desktop → Settings → Resources → Proxies**:
+- یا گزینهٔ «No proxy» را بزن،
+- یا آدرس پروکسی میزبان را با `host.docker.internal` بده، نه `127.0.0.1`؛ مثلاً `http://host.docker.internal:10808`.
+
+سپس Apply & Restart و دوباره `docker compose up --build -d`.
+
 ## عیب‌یابی ورود
 
 حساب‌ها در دیتابیس ذخیره می‌شوند. اگر بین ثبت‌نام و ورود فایل دیتابیس عوض یا پاک شود، حساب از بین می‌رود و پیام «رمز عبور نادرست» دیده می‌شود.
