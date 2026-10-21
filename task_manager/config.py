@@ -15,7 +15,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = "Task Manager"
+    app_name: str = "Bordik"
     database_url: str = "sqlite:///./tasks.db"
     jwt_secret_key: str = Field(min_length=32)
     jwt_algorithm: Literal["HS256"] = "HS256"
