@@ -124,24 +124,204 @@ Authorization: Bearer <access_token>
 
 ## اجرا با Docker
 
-ابتدا فایل `.env` را از نمونه بساز و مقادیر `JWT_SECRET_KEY` و `POSTGRES_PASSWORD` را عوض کن:
+فایل‌های آماده در ریشه پروژه: `Dockerfile`، `docker-compose.yml`، `.env.docker.example`.
+اپ **app** هنگام بالا آمدن خودش `alembic upgrade head` را اجرا می‌کند و دیتابیس PostgreSQL در یک volume ماندگار ذخیره می‌شود.
 
-```powershell
-Copy-Item .env.docker.example .env
-python -c "import secrets; print(secrets.token_urlsafe(48))"
+### پیش‌نیاز مشترک
+
+1. Docker و افزونهٔ Compose نصب باشد.
+2. پروژه را کلون کن:
+   ```bash
+   git clone https://github.com/tbehzad76/Bordik.git
+   cd Bordik
+   ```
+3. فایل محیطی بساز:
+   ```bash
+   cp .env.docker.example .env
+   chmod 600 .env
+   ```
+4. دو مقدار امن بساز و در `.env` بگذار:
+   ```env
+   JWT_SECRET_KEY=<رشته تصادفی حداقل ۳۲ کاراکتری>
+   POSTGRES_PASSWORD=<رمز قوی دیتابیس>
+   APP_PORT=8000
+   ACCESS_TOKEN_EXPIRE_MINUTES=60
+   COOKIE_SECURE=false
+   WEB_CONCURRENCY=2
+   ```
+   ساخت مقدار تصادفی:
+   ```bash
+   python3 -c "import secrets; print(secrets.token_urlsafe(48))"
+   openssl rand -base64 24
+   ```
+
+> `COOKIE_SECURE` را فقط وقتی `true` کن که دامنه‌ات HTTPS دارد.
+
+---
+
+### لینوکس (Ubuntu / Debian)
+
+نصب Docker:
+```bash
+curl -fsSL https://get.docker.com | sudo sh
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+```
+یک‌بار از سرور خارج و دوباره وارد شو، بعد بررسی کن:
+```bash
+docker --version
+docker compose version
 ```
 
-سپس:
-
-```powershell
+بیلد و اجرا:
+```bash
 docker compose up --build -d
+docker compose ps
 docker compose logs -f app
 ```
 
-- برنامه: `http://localhost:8000`
-- PostgreSQL در volume به نام `pgdata` ذخیره می‌شود؛ `docker compose down` داده‌ها را نگه می‌دارد و فقط `docker compose down -v` آن‌ها را پاک می‌کند.
-- مهاجرت‌های Alembic هنگام بالا آمدن کانتینر خودکار اجرا می‌شوند.
-- اگر پشت HTTPS اجرا می‌کنی، `COOKIE_SECURE=true` بگذار.
+بررسی سلامت:
+```bash
+curl http://127.0.0.1:8000/health
+```
+باید `{"status":"ok"}` برگردد. در مرورگر: `http://IP-سرور:8000`.
+
+فایروال:
+```bash
+sudo ufw allow 22,80,443/tcp
+# اگر فعلاً بدون دامنه و روی پورت ۸۰۰۰ می‌خواهی:
+sudo ufw allow 8000/tcp
+```
+
+---
+
+### ویندوز (Docker Desktop)
+
+> Docker Desktop روی Windows 10/11 (با WSL2) پشتیبانی می‌شود و روی Windows Server پشتیبانی رسمی ندارد؛ برای Windows Server یک VM لینوکس یا WSL2 توصیه می‌شود.
+> ایمیج Linux است، پس Docker Desktop باید در حالت **Linux containers** باشد.
+
+پیش‌نیازها:
+```powershell
+wsl --install
+wsl --set-default-version 2
+winget install --id Git.Git -e
+```
+Docker Desktop را نصب کن، بازش کن و گزینهٔ «Start Docker Desktop when you sign in» را روشن بگذار. سپس:
+```powershell
+docker --version
+docker compose version
+docker info
+```
+
+گرفتن پروژه:
+```powershell
+New-Item -ItemType Directory -Force C:\apps | Out-Null
+Set-Location C:\apps
+git clone https://github.com/tbehzad76/Bordik.git
+Set-Location C:\apps\Bordik
+Copy-Item .env.docker.example .env
+notepad .env
+```
+ساخت مقدار تصادفی:
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+# بدون پایتون:
+[Convert]::ToBase64String((New-Object Security.Cryptography.RNGCryptoServiceProvider).GetBytes(36))
+```
+
+بیلد و اجرا:
+```powershell
+docker compose up --build -d
+docker compose ps
+docker compose logs -f app
+```
+
+بررسی سلامت:
+```powershell
+Invoke-RestMethod http://localhost:8000/health
+```
+دسترسی از شبکهٔ شرکت (PowerShell ادمین):
+```powershell
+New-NetFirewallRule -DisplayName "Bordik 8000" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow
+ipconfig
+```
+سپس از سیستم‌های دیگر: `http://<IP-سرور>:8000`.
+
+---
+
+### HTTPS با دامنه (Caddy)
+
+یک فایل `Caddyfile` بساز:
+```text
+bordik.example.com {
+    reverse_proxy app:8000
+}
+```
+و یک فایل `docker-compose.https.yml`:
+```yaml
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  caddy_data:
+  caddy_config:
+```
+`COOKIE_SECURE=true` را در `.env` بگذار و اجرا کن:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.https.yml up --build -d
+```
+دامنه باید به IP سرور اشاره کند و پورت‌های ۸۰ و ۴۴۳ از اینترنت باز باشند.
+
+---
+
+### به‌روزرسانی
+
+```bash
+git pull
+docker compose up --build -d
+```
+مهاجرت‌های Alembic هنگام استارت خودکار اجرا می‌شوند.
+
+### بکاپ و بازیابی
+
+Linux:
+```bash
+docker compose exec db pg_dump -U tasks -d tasks -f /tmp/backup.sql
+docker compose cp db:/tmp/backup.sql ./backup.sql
+docker compose cp ./backup.sql db:/tmp/backup.sql
+docker compose exec db psql -U tasks -d tasks -f /tmp/backup.sql
+```
+Windows:
+```powershell
+docker compose exec db pg_dump -U tasks -d tasks -f /tmp/backup.sql
+docker compose cp db:/tmp/backup.sql .\backup.sql
+docker compose cp .\backup.sql db:/tmp/backup.sql
+docker compose exec db psql -U tasks -d tasks -f /tmp/backup.sql
+```
+
+### عیب‌یابی Docker
+
+```bash
+docker compose logs -f app db
+docker compose ps
+docker compose restart app
+docker compose exec app alembic current
+```
+- app پشت‌سرهم ری‌استارت می‌شود؟ معمولاً `JWT_SECRET_KEY` ست نشده یا کمتر از ۳۲ کاراکتر است.
+- خطای ۵۰۲ از reverse proxy یعنی app هنوز سالم نشده؛ `docker compose logs -f app` را ببین.
+- روی ویندوز اگر پورت اشغال بود: `netstat -ano | findstr :8000`.
+- داده‌ها با `docker compose down` می‌مانند و فقط `docker compose down -v` آن‌ها را پاک می‌کند.
 
 ## عیب‌یابی ورود
 
