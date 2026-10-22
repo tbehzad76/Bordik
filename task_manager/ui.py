@@ -83,7 +83,7 @@ DEFAULT_COLUMNS = (
     ("انجام‌شده", True),
 )
 
-ASSET_VERSION = "5"
+ASSET_VERSION = "6"
 
 FormPhone = Annotated[str, Form(min_length=1, max_length=30)]
 FormPassword = Annotated[str, Form(min_length=1, max_length=128)]
@@ -488,10 +488,21 @@ def projects_page(
                     BoardColumn.is_done.is_(True),
                 )
             ) or 0
+            mine = db.scalar(
+                select(func.count(Task.id))
+                .join(BoardColumn, Task.column_id == BoardColumn.id)
+                .join(task_assignees, Task.id == task_assignees.c.task_id)
+                .where(
+                    Task.project_id == project.id,
+                    task_assignees.c.user_id == user.id,
+                    BoardColumn.is_done.is_(False),
+                )
+            ) or 0
             project_rows.append(
                 {
                     "project": project,
                     "role": roles[project.id],
+                    "mine_count": mine,
                     "progress": {
                         "total": total,
                         "done": done,

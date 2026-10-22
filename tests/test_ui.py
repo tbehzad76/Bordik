@@ -425,6 +425,48 @@ def test_board_card_modal_priority_and_my_tasks(client):
     assert "وظایف من" in my_tasks.text
 
 
+def test_project_color_edit_and_mine_tag(client):
+    register_via_ui(client)
+    project_id = create_project_via_ui(client)
+    board = client.get(f"/projects/{project_id}")
+    assert 'name="color"' in board.text
+
+    token = extract_csrf(board.text)
+    edited = client.post(
+        f"/projects/{project_id}/edit",
+        data={
+            "name": "Recolored",
+            "description": "",
+            "color": "rose",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert edited.status_code == 303
+    board = client.get(f"/projects/{project_id}")
+    assert "color-rose" in board.text
+
+    column_id = int(re.search(r'data-column-id="(\d+)"', board.text).group(1))
+    assignee_id = int(
+        re.search(r'name="assignee_ids" value="(\d+)"', board.text).group(1)
+    )
+    created = client.post(
+        f"/projects/{project_id}/cards",
+        data={
+            "title": "Assigned to me",
+            "column_id": str(column_id),
+            "assignee_ids": str(assignee_id),
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert created.status_code == 303
+
+    projects_page = client.get("/projects")
+    assert "وظیفه برای شما" in projects_page.text
+    assert "badge-mine" in projects_page.text
+
+
 def test_static_assets_are_served(client):
     css = client.get("/static/style.css")
     js = client.get("/static/board.js")

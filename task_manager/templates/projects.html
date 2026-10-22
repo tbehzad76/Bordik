@@ -54,6 +54,9 @@
         {% if row.role == "owner" %}مالک{% else %}عضو{% endif %}
       </span>
     </div>
+    {% if row.mine_count %}
+    <span class="badge badge-mine">{{ row.mine_count }} وظیفه برای شما</span>
+    {% endif %}
     {% if row.project.description %}
     <p class="muted project-description">{{ row.project.description }}</p>
     {% endif %}

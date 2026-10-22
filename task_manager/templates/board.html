@@ -29,6 +29,18 @@
         <textarea id="project-edit-description" name="description" rows="3"
                   maxlength="2000">{{ project.description or "" }}</textarea>
       </div>
+      <fieldset class="field color-choices">
+        <legend>رنگ پروژه</legend>
+        <div class="color-choice-list">
+          {% for key, hex in PROJECT_COLORS.items() %}
+          <label class="color-choice" title="{{ PROJECT_COLOR_LABELS.get(key, key) }}">
+            <input type="radio" name="color" value="{{ key }}" {% if key == project.color %}checked{% endif %}>
+            <span class="color-swatch color-{{ key }}"></span>
+            <span class="color-name">{{ PROJECT_COLOR_LABELS.get(key, key) }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </fieldset>
       <button class="btn btn-primary btn-small" type="submit">ذخیره</button>
     </form>
   </details>

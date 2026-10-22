@@ -144,6 +144,7 @@ class ProjectSummary(BaseModel):
     card_count: int
     done_count: int
     progress_percent: int
+    assigned_to_me_count: int = 0
     created_at: datetime
 
 

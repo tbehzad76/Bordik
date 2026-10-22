@@ -33,6 +33,16 @@ PROJECT_COLORS = {
     "slate": "#475569",
 }
 
+PROJECT_COLOR_SOFT = {
+    "blue": "#e6efff",
+    "green": "#e5f6ec",
+    "purple": "#efe7fe",
+    "orange": "#ffefe3",
+    "rose": "#ffe7ee",
+    "teal": "#e0f5f2",
+    "slate": "#eceff3",
+}
+
 PROJECT_COLOR_LABELS = {
     "blue": "آبی",
     "green": "سبز",

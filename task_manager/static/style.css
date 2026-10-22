@@ -1286,13 +1286,29 @@ select:focus {
   white-space: nowrap;
 }
 
-.color-blue { --project-color: #2563eb; }
-.color-green { --project-color: #16a34a; }
-.color-purple { --project-color: #7c3aed; }
-.color-orange { --project-color: #ea580c; }
-.color-rose { --project-color: #e11d48; }
-.color-teal { --project-color: #0d9488; }
-.color-slate { --project-color: #475569; }
+.color-blue { --project-color: #2563eb; --project-soft: #e6efff; }
+.color-green { --project-color: #16a34a; --project-soft: #e5f6ec; }
+.color-purple { --project-color: #7c3aed; --project-soft: #efe7fe; }
+.color-orange { --project-color: #ea580c; --project-soft: #ffefe3; }
+.color-rose { --project-color: #e11d48; --project-soft: #ffe7ee; }
+.color-teal { --project-color: #0d9488; --project-soft: #e0f5f2; }
+.color-slate { --project-color: #475569; --project-soft: #eceff3; }
+
+.project-card {
+  background: var(--project-soft, var(--surface));
+  border-color: var(--project-color, var(--line));
+  border-color: color-mix(in srgb, var(--project-color, var(--line)) 22%, #ffffff);
+}
+
+.project-card:hover {
+  border-color: var(--project-color, #cbd5e1);
+}
+
+.badge-mine {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #c2410c;
+}
 
 .project-color-strip {
   display: block;

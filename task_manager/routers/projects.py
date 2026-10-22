@@ -10,6 +10,7 @@ from ..models import (
     ProjectMember,
     Task,
     User,
+    task_assignees,
 )
 from ..notifications import notify_new_task
 from ..permissions import (
@@ -54,7 +55,9 @@ DEFAULT_COLUMNS: tuple[tuple[str, bool], ...] = (
 )
 
 
-def _summary(project: Project, role: str) -> ProjectSummary:
+def _summary(
+    project: Project, role: str, assigned_to_me: int = 0
+) -> ProjectSummary:
     done_column_ids = {column.id for column in project.columns if column.is_done}
     total = sum(len(column.cards) for column in project.columns)
     done = sum(
@@ -75,6 +78,7 @@ def _summary(project: Project, role: str) -> ProjectSummary:
         card_count=total,
         done_count=done,
         progress_percent=percent,
+        assigned_to_me_count=assigned_to_me,
         created_at=project.created_at,
     )
 
@@ -123,7 +127,23 @@ def list_projects(db: DbSession, current_user: CurrentUser) -> list[ProjectSumma
         ).all()
     )
     roles = {membership.project_id: membership.role for membership in memberships}
-    return [_summary(project, roles[project.id]) for project in projects]
+    my_counts = dict(
+        db.execute(
+            select(Task.project_id, func.count(Task.id))
+            .join(BoardColumn, Task.column_id == BoardColumn.id)
+            .join(task_assignees, Task.id == task_assignees.c.task_id)
+            .where(
+                task_assignees.c.user_id == current_user.id,
+                Task.project_id.in_(project_ids),
+                BoardColumn.is_done.is_(False),
+            )
+            .group_by(Task.project_id)
+        ).all()
+    )
+    return [
+        _summary(project, roles[project.id], my_counts.get(project.id, 0))
+        for project in projects
+    ]
 
 
 @router.post("", response_model=BoardRead, status_code=status.HTTP_201_CREATED)

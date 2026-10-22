@@ -396,6 +396,29 @@ def test_priority_and_my_tasks(client, headers):
     assert len(only_open) == 3
 
 
+def test_assigned_to_me_count(client, headers):
+    project = create_project(client, headers)
+    column_id = project["columns"][0]["id"]
+    me = client.get("/api/auth/me", headers=headers).json()["id"]
+
+    card = client.post(
+        f"/api/projects/{project['id']}/cards",
+        json={"title": "Mine", "column_id": column_id, "assignee_ids": [me]},
+        headers=headers,
+    ).json()
+
+    summary = client.get("/api/projects", headers=headers).json()[0]
+    assert summary["assigned_to_me_count"] == 1
+
+    client.post(
+        f"/api/projects/{project['id']}/cards/{card['id']}/move",
+        json={"column_id": project["columns"][2]["id"], "position": 0},
+        headers=headers,
+    )
+    summary = client.get("/api/projects", headers=headers).json()[0]
+    assert summary["assigned_to_me_count"] == 0
+
+
 def test_update_and_delete_project(client, headers):
     project = create_project(client, headers)
 
