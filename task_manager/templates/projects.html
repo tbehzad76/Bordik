@@ -46,8 +46,7 @@
 {% if project_rows %}
 <div class="project-grid">
   {% for row in project_rows %}
-  <a class="card project-card" href="/projects/{{ row.project.id }}">
-    <span class="project-color-strip color-{{ row.project.color }}"></span>
+  <a class="card project-card color-{{ row.project.color }}" href="/projects/{{ row.project.id }}">
     <div class="project-card-head">
       <h2>{{ row.project.name }}</h2>
       <span class="badge {% if row.role == 'owner' %}badge-owner{% endif %}">

@@ -1294,13 +1294,12 @@ select:focus {
 .color-teal { --project-color: #0d9488; --project-soft: #e0f5f2; }
 .color-slate { --project-color: #475569; --project-soft: #eceff3; }
 
-.project-card {
+.project-card.card {
   background: var(--project-soft, var(--surface));
-  border-color: var(--project-color, var(--line));
   border-color: color-mix(in srgb, var(--project-color, var(--line)) 22%, #ffffff);
 }
 
-.project-card:hover {
+.project-card.card:hover {
   border-color: var(--project-color, #cbd5e1);
 }
 
@@ -1308,6 +1307,63 @@ select:focus {
   background: #fff7ed;
   border-color: #fed7aa;
   color: #c2410c;
+}
+
+.done-filter {
+  margin-bottom: 1rem;
+}
+
+.switch-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.switch-line input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-box {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  transition: background 0.18s ease;
+  flex-shrink: 0;
+}
+
+.switch-box::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.18s ease;
+}
+
+.switch-line input:checked + .switch-box {
+  background: var(--primary);
+}
+
+.switch-line input:checked + .switch-box::after {
+  transform: translateX(-16px);
+}
+
+.switch-line input:focus-visible + .switch-box {
+  outline: 3px solid rgba(37, 99, 235, 0.35);
+  outline-offset: 2px;
 }
 
 .project-color-strip {

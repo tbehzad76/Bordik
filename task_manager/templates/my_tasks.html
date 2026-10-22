@@ -12,10 +12,16 @@
 <nav class="tabs" aria-label="فیلتر کارها">
   <a class="tab {% if scope == 'mine' %}is-active{% endif %}" href="/my-tasks?scope=mine&amp;include_done={{ include_done }}">فقط من</a>
   <a class="tab {% if scope == 'all' %}is-active{% endif %}" href="/my-tasks?scope=all&amp;include_done={{ include_done }}">همهٔ پروژه‌های من</a>
-  <a class="tab {% if include_done != '1' %}is-active{% endif %}" href="/my-tasks?scope={{ scope }}&amp;include_done={% if include_done == '1' %}0{% else %}1{% endif %}">
-    {% if include_done == "1" %}فقط انجام‌نشده‌ها{% else %}نمایش انجام‌شده‌ها{% endif %}
-  </a>
 </nav>
+
+<form class="done-filter" method="get" action="/my-tasks" data-auto-submit>
+  <input type="hidden" name="scope" value="{{ scope }}">
+  <label class="switch-line">
+    <input type="checkbox" name="include_done" value="1" {% if include_done == '1' %}checked{% endif %}>
+    <span class="switch-box" aria-hidden="true"></span>
+    <span>نمایش وظایف انجام‌شده</span>
+  </label>
+</form>
 
 {% if rows %}
 <ul class="my-task-list">
@@ -52,4 +58,7 @@
   <p class="muted">یا وظیفه‌ای به تو سپرده نشده، یا فیلترها را طوری تنظیم کرده‌ای که چیزی نمانده است.</p>
 </div>
 {% endif %}
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', path='/filter-toggle.js') }}?v={{ asset_version }}" defer></script>
 {% endblock %}

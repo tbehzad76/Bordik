@@ -423,6 +423,9 @@ def test_board_card_modal_priority_and_my_tasks(client):
     assert my_tasks.status_code == 200
     assert "Urgent board card" in my_tasks.text
     assert "وظایف من" in my_tasks.text
+    assert my_tasks.text.count('class="tab ') == 2
+    assert "data-auto-submit" in my_tasks.text
+    assert "switch-box" in my_tasks.text
 
 
 def test_project_color_edit_and_mine_tag(client):
@@ -465,6 +468,7 @@ def test_project_color_edit_and_mine_tag(client):
     projects_page = client.get("/projects")
     assert "وظیفه برای شما" in projects_page.text
     assert "badge-mine" in projects_page.text
+    assert "project-card color-rose" in projects_page.text
 
 
 def test_static_assets_are_served(client):
