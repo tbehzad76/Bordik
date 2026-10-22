@@ -17,6 +17,7 @@ from .dependencies import (
     DbSession,
     OptionalUser,
 )
+from .jalali import format_jalali, format_jalali_datetime, parse_jalali
 from .models import BoardColumn, Project, ProjectInvitation, ProjectMember, Task, User
 from .permissions import (
     can_delete_card,
@@ -47,6 +48,8 @@ from .services import accept_pending_invitations, authenticate_user
 
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates.env.filters["jdate"] = format_jalali
+templates.env.filters["jdatetime"] = format_jalali_datetime
 
 router = APIRouter(include_in_schema=False)
 
@@ -71,7 +74,7 @@ def _parse_due_date(value: str | None) -> date | None:
     if not value or not value.strip():
         return None
     try:
-        return date.fromisoformat(value.strip())
+        return parse_jalali(value)
     except ValueError:
         return None
 

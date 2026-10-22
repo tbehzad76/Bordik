@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 
+from task_manager.jalali import format_jalali
 from tests.conftest import (
     api_register,
     auth_headers,
@@ -319,6 +320,7 @@ def test_card_due_date_and_days(client, headers):
     )
     assert explicit.status_code == 201
     assert explicit.json()["due_date"] == "2030-01-02"
+    assert explicit.json()["due_date_jalali"] == format_jalali(date(2030, 1, 2))
     assert explicit.json()["days_remaining"] > 0
 
     relative = client.post(

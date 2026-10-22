@@ -40,9 +40,10 @@
       </div>
       <div class="due-fields">
         <div class="field">
-          <label for="card-due-date">تاریخ سررسید</label>
-          <input id="card-due-date" name="due_date" type="date"
-                 value="{{ card.due_date.isoformat() if card.due_date else '' }}">
+          <label for="card-due-date">تاریخ سررسید (جلالی)</label>
+          <input id="card-due-date" name="due_date" type="text" data-jalali
+                 value="{{ card.due_date | jdate }}" placeholder="۱۴۰۳/۰۵/۱۲"
+                 autocomplete="off" inputmode="numeric" maxlength="10">
         </div>
         <div class="field">
           <label for="card-due-days">یا تعداد روز</label>
@@ -52,7 +53,7 @@
       </div>
       {% if card.due_date %}
       <p class="muted due-summary">
-        سررسید فعلی: {{ card.due_date.strftime("%Y/%m/%d") }}
+        سررسید فعلی: {{ card.due_date | jdate }}
         {% set days = (card.due_date - today).days %}
         ({% if days < 0 %}{{ -days }} روز تأخیر{% elif days == 0 %}امروز{% else %}{{ days }} روز مانده{% endif %})
       </p>
@@ -89,9 +90,9 @@
       <dt>شناسه کارت</dt>
       <dd>{{ card.id }}</dd>
       <dt>ساخته‌شده</dt>
-      <dd>{{ card.created_at.strftime("%Y/%m/%d %H:%M") }}</dd>
+      <dd>{{ card.created_at | jdatetime }}</dd>
       <dt>آخرین ویرایش</dt>
-      <dd>{{ card.updated_at.strftime("%Y/%m/%d %H:%M") }}</dd>
+      <dd>{{ card.updated_at | jdatetime }}</dd>
     </dl>
     {% if can_delete %}
     <form method="post" action="/projects/{{ project.id }}/cards/{{ card.id }}/delete">
@@ -103,4 +104,7 @@
     {% endif %}
   </aside>
 </div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', path='/jalali.js') }}" defer></script>
 {% endblock %}

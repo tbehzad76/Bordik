@@ -372,6 +372,7 @@ def test_api_does_not_accept_ui_cookie(client):
 def test_static_assets_are_served(client):
     css = client.get("/static/style.css")
     js = client.get("/static/board.js")
+    jalali = client.get("/static/jalali.js")
     font = client.get("/static/fonts/Vazirmatn-Regular.ttf")
 
     assert css.status_code == 200
@@ -380,6 +381,8 @@ def test_static_assets_are_served(client):
     assert "overflow-x: auto" not in css.text.split(".board {")[1].split("}")[0]
     assert js.status_code == 200
     assert "javascript" in js.headers["content-type"]
+    assert jalali.status_code == 200
+    assert "toJalaali" in jalali.text
     assert font.status_code == 200
     assert len(font.content) > 1000
 
@@ -412,19 +415,21 @@ def test_card_due_date_via_ui(client):
     card = client.get(f"/projects/{project_id}/cards/{card_id}")
     assert 'name="due_date"' in card.text
     assert 'name="due_in_days"' in card.text
+    assert "data-jalali" in card.text
+    assert "jalali.js" in card.text
 
     edited = client.post(
         f"/projects/{project_id}/cards/{card_id}/edit",
         data={
             "title": "Timed card",
             "column_id": str(column_id),
-            "due_date": "2030-05-01",
+            "due_date": "1409/02/12",
             "csrf_token": token,
         },
         follow_redirects=False,
     )
     assert edited.status_code == 303
-    assert "2030/05/01" in client.get(
+    assert "1409/02/12" in client.get(
         f"/projects/{project_id}/cards/{card_id}"
     ).text
 

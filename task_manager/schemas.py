@@ -10,6 +10,7 @@ from pydantic import (
     model_validator,
 )
 
+from .jalali import format_jalali
 from .phones import normalize_phone
 
 
@@ -267,6 +268,13 @@ class CardRead(BaseModel):
         if self.due_date is None:
             return None
         return (self.due_date - date.today()).days
+
+    @computed_field
+    @property
+    def due_date_jalali(self) -> str | None:
+        if self.due_date is None:
+            return None
+        return format_jalali(self.due_date)
 
 
 class ColumnRead(BaseModel):
