@@ -16,8 +16,9 @@
 
 <form class="done-filter" method="get" action="/my-tasks" data-auto-submit>
   <input type="hidden" name="scope" value="{{ scope }}">
+  <input type="hidden" name="include_done" value="{{ include_done }}">
   <label class="switch-line">
-    <input type="checkbox" name="include_done" value="1" {% if include_done == '1' %}checked{% endif %}>
+    <input type="checkbox" data-toggle="include_done" {% if include_done == '1' %}checked{% endif %}>
     <span class="switch-box" aria-hidden="true"></span>
     <span>نمایش وظایف انجام‌شده</span>
   </label>

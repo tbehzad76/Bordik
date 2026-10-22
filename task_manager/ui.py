@@ -83,7 +83,7 @@ DEFAULT_COLUMNS = (
     ("انجام‌شده", True),
 )
 
-ASSET_VERSION = "7"
+ASSET_VERSION = "8"
 
 FormPhone = Annotated[str, Form(min_length=1, max_length=30)]
 FormPassword = Annotated[str, Form(min_length=1, max_length=128)]
@@ -373,7 +373,7 @@ def my_tasks_page(
     settings: AppSettings,
     user: OptionalUser,
     scope: str = "mine",
-    include_done: str = "1",
+    include_done: str = "0",
 ) -> Response:
     if user is None:
         return _redirect("/login")

@@ -471,6 +471,45 @@ def test_project_color_edit_and_mine_tag(client):
     assert "project-card color-rose" in projects_page.text
 
 
+def test_my_tasks_done_filter(client):
+    register_via_ui(client)
+    project_id = create_project_via_ui(client)
+    board = client.get(f"/projects/{project_id}")
+    token = extract_csrf(board.text)
+    columns = list(dict.fromkeys(re.findall(r'data-column-id="(\d+)"', board.text)))
+    assignee_id = int(
+        re.search(r'name="assignee_ids" value="(\d+)"', board.text).group(1)
+    )
+    created = client.post(
+        f"/projects/{project_id}/cards",
+        data={
+            "title": "Done card",
+            "column_id": columns[0],
+            "assignee_ids": str(assignee_id),
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert created.status_code == 303
+    card_id = int(
+        re.search(r'data-card-id="(\d+)"', client.get(f"/projects/{project_id}").text).group(1)
+    )
+    moved = client.post(
+        f"/projects/{project_id}/cards/{card_id}/move",
+        json={"column_id": int(columns[2]), "position": 0},
+        headers={"X-CSRF-Token": token},
+    )
+    assert moved.status_code == 200
+
+    default_page = client.get("/my-tasks")
+    assert "Done card" not in default_page.text
+    assert 'name="include_done" value="0"' in default_page.text
+
+    with_done = client.get("/my-tasks?include_done=1")
+    assert "Done card" in with_done.text
+    assert 'name="include_done" value="1"' in with_done.text
+
+
 def test_static_assets_are_served(client):
     css = client.get("/static/style.css")
     js = client.get("/static/board.js")
