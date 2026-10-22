@@ -3,7 +3,8 @@ FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
 
 WORKDIR /app
 
@@ -12,8 +13,9 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt ./
+
 RUN python -m pip install --upgrade pip setuptools wheel \
-    && python -m pip install --no-cache-dir --retries 5 --timeout 60 -r requirements.txt
+    && python -m pip install --retries 5 --timeout 60 -r requirements.txt
 
 COPY . .
 
