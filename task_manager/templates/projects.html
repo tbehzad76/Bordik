@@ -49,13 +49,15 @@
   <a class="card project-card color-{{ row.project.color }}" href="/projects/{{ row.project.id }}">
     <div class="project-card-head">
       <h2>{{ row.project.name }}</h2>
-      <span class="badge {% if row.role == 'owner' %}badge-owner{% endif %}">
-        {% if row.role == "owner" %}مالک{% else %}عضو{% endif %}
-      </span>
+      <div class="project-card-badges">
+        {% if row.mine_count %}
+        <span class="badge badge-mine">{{ row.mine_count }} وظیفه برای شما</span>
+        {% endif %}
+        <span class="badge {% if row.role == 'owner' %}badge-owner{% endif %}">
+          {% if row.role == "owner" %}مالک{% else %}عضو{% endif %}
+        </span>
+      </div>
     </div>
-    {% if row.mine_count %}
-    <span class="badge badge-mine">{{ row.mine_count }} وظیفه برای شما</span>
-    {% endif %}
     {% if row.project.description %}
     <p class="muted project-description">{{ row.project.description }}</p>
     {% endif %}

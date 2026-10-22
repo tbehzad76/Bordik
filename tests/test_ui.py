@@ -468,6 +468,7 @@ def test_project_color_edit_and_mine_tag(client):
     projects_page = client.get("/projects")
     assert "وظیفه برای شما" in projects_page.text
     assert "badge-mine" in projects_page.text
+    assert "project-card-badges" in projects_page.text
     assert "project-card color-rose" in projects_page.text
 
 
