@@ -23,6 +23,13 @@ class Settings(BaseSettings):
     cookie_secure: bool = False
     auto_create_tables: bool = True
 
+    rubika_enabled: bool = False
+    rubika_bot_token: str = ""
+    rubika_api_base: str = "https://botapi.rubika.ir/v3"
+    rubika_poll_interval_seconds: int = Field(default=3, ge=1, le=60)
+    rubika_send_method: str = "sendMessage"
+    rubika_updates_method: str = "getUpdates"
+
     @field_validator("jwt_secret_key")
     @classmethod
     def reject_placeholder_secret(cls, value: str) -> str:

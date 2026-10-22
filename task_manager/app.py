@@ -1,4 +1,5 @@
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -9,6 +10,7 @@ from . import models, ui  # noqa: F401
 from .config import Settings, get_settings
 from .database import Base, build_engine, build_session_factory
 from .routers import auth, projects
+from .rubika import run_polling
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
@@ -48,9 +50,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if settings.auto_create_tables:
             Base.metadata.create_all(bind=engine)
         _prepare_schema(engine, settings)
+
+        rubika_task = None
+        if settings.rubika_enabled and settings.rubika_bot_token:
+            rubika_task = asyncio.create_task(
+                run_polling(session_factory, settings)
+            )
         try:
             yield
         finally:
+            if rubika_task is not None:
+                rubika_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await rubika_task
             engine.dispose()
 
     app = FastAPI(

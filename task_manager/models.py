@@ -193,3 +193,18 @@ class Task(Base):
         back_populates="assigned_tasks",
         order_by="User.id",
     )
+
+
+class RubikaLink(Base):
+    __tablename__ = "rubika_links"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    chat_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now
+    )
+
+    user: Mapped[User] = relationship()
