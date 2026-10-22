@@ -372,7 +372,9 @@ def test_api_does_not_accept_ui_cookie(client):
 def test_static_assets_are_served(client):
     css = client.get("/static/style.css")
     js = client.get("/static/board.js")
-    jalali = client.get("/static/jalali.js")
+    picker_js = client.get("/static/vendor/jalalidatepicker/jalalidatepicker.min.js")
+    picker_css = client.get("/static/vendor/jalalidatepicker/jalalidatepicker.min.css")
+    picker_init = client.get("/static/jalali-init.js")
     font = client.get("/static/fonts/Vazirmatn-Regular.ttf")
 
     assert css.status_code == 200
@@ -381,8 +383,10 @@ def test_static_assets_are_served(client):
     assert "overflow-x: auto" not in css.text.split(".board {")[1].split("}")[0]
     assert js.status_code == 200
     assert "javascript" in js.headers["content-type"]
-    assert jalali.status_code == 200
-    assert "toJalaali" in jalali.text
+    assert picker_js.status_code == 200
+    assert picker_css.status_code == 200
+    assert picker_init.status_code == 200
+    assert "jalaliDatepicker" in picker_init.text
     assert font.status_code == 200
     assert len(font.content) > 1000
 
@@ -415,8 +419,8 @@ def test_card_due_date_via_ui(client):
     card = client.get(f"/projects/{project_id}/cards/{card_id}")
     assert 'name="due_date"' in card.text
     assert 'name="due_in_days"' in card.text
-    assert "data-jalali" in card.text
-    assert "jalali.js" in card.text
+    assert "data-jdp" in card.text
+    assert "jalalidatepicker.min.js" in card.text
 
     edited = client.post(
         f"/projects/{project_id}/cards/{card_id}/edit",
