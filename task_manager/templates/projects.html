@@ -7,11 +7,13 @@
     <h1>پروژه‌های من</h1>
     <p class="muted">پروژه بسازید و کارهای تیم را در برد مشترک مدیریت کنید.</p>
   </div>
+  <button class="btn btn-primary" type="button" data-open-project-modal>پروژه جدید</button>
 </section>
 
-<form class="card task-form" method="post" action="/projects">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-  <div class="task-form-grid">
+<dialog id="project-modal" class="modal" aria-labelledby="project-modal-title">
+  <form class="stack" method="post" action="/projects">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <h2 id="project-modal-title">ساخت پروژه جدید</h2>
     <div class="field">
       <label for="project-name">نام پروژه</label>
       <input id="project-name" name="name" type="text" placeholder="مثلاً پروژه سایت شرکت"
@@ -19,12 +21,15 @@
     </div>
     <div class="field">
       <label for="project-description">توضیحات <span class="optional">(اختیاری)</span></label>
-      <textarea id="project-description" name="description" rows="2"
+      <textarea id="project-description" name="description" rows="3"
                 placeholder="هدف پروژه..." maxlength="2000"></textarea>
     </div>
-  </div>
-  <button class="btn btn-primary" type="submit">ساخت پروژه</button>
-</form>
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">ساخت پروژه</button>
+      <button class="btn btn-ghost" type="button" data-close-project-modal>انصراف</button>
+    </div>
+  </form>
+</dialog>
 
 {% if project_rows %}
 <div class="project-grid">
@@ -39,8 +44,14 @@
     {% if row.project.description %}
     <p class="muted project-description">{{ row.project.description }}</p>
     {% endif %}
+    <div class="project-progress">
+      <progress class="progress" value="{{ row.progress.done }}" max="{{ row.progress.total or 1 }}"></progress>
+      <span class="progress-text">
+        {{ row.progress.done }} از {{ row.progress.total }} کار انجام شده ({{ row.progress.percent }}٪)
+      </span>
+    </div>
     <div class="project-card-foot">
-      <span>{{ row.card_count }} کارت</span>
+      <span>{{ row.progress.total }} کارت</span>
       <span>ساخت: {{ row.project.created_at | jdate }}</span>
     </div>
   </a>
@@ -50,7 +61,10 @@
 <div class="card empty-state">
   <span class="empty-mark" aria-hidden="true"></span>
   <h2>هنوز پروژه‌ای ندارید</h2>
-  <p class="muted">اولین پروژه را از فرم بالا بسازید یا منتظر دعوت همکاران بمانید.</p>
+  <p class="muted">با دکمهٔ «پروژه جدید» اولین پروژه را بسازید یا منتظر دعوت همکاران بمانید.</p>
 </div>
 {% endif %}
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', path='/projects.js') }}" defer></script>
 {% endblock %}

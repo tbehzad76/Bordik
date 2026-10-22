@@ -51,6 +51,8 @@ def test_create_and_list_projects(client, headers):
     assert listing.status_code == 200
     assert [item["id"] for item in listing.json()] == [project["id"]]
     assert listing.json()[0]["card_count"] == 0
+    assert listing.json()[0]["done_count"] == 0
+    assert listing.json()[0]["progress_percent"] == 0
 
 
 def test_non_member_cannot_access_project(client, headers):
@@ -289,6 +291,30 @@ def test_column_management(client, headers):
         ).status_code
         == 400
     )
+
+
+def test_project_progress(client, headers):
+    project = create_project(client, headers)
+    columns = project["columns"]
+    create_card(client, headers, project["id"], "One", columns[0]["id"])
+    second = create_card(client, headers, project["id"], "Two", columns[0]["id"]).json()
+
+    client.post(
+        f"/api/projects/{project['id']}/cards/{second['id']}/move",
+        json={"column_id": columns[2]["id"], "position": 0},
+        headers=headers,
+    )
+
+    summary = client.get("/api/projects", headers=headers).json()[0]
+    assert summary["card_count"] == 2
+    assert summary["done_count"] == 1
+    assert summary["progress_percent"] == 50
+
+    board = client.get(
+        f"/api/projects/{project['id']}", headers=headers
+    ).json()
+    done_column = next(column for column in board["columns"] if column["is_done"])
+    assert len(done_column["cards"]) == 1
 
 
 def test_update_and_delete_project(client, headers):

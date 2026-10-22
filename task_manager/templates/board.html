@@ -31,6 +31,13 @@
   {% endif %}
 </section>
 
+<div class="board-progress">
+  <progress class="progress" value="{{ progress.done }}" max="{{ progress.total or 1 }}"></progress>
+  <span class="progress-text">
+    {{ progress.done }} از {{ progress.total }} کار انجام شده ({{ progress.percent }}٪)
+  </span>
+</div>
+
 <div class="board-layout">
   <div class="board" data-board data-project-id="{{ project.id }}">
     {% for column in columns %}

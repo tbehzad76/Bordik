@@ -120,6 +120,8 @@ class ProjectSummary(BaseModel):
     role: str
     member_count: int
     card_count: int
+    done_count: int
+    progress_percent: int
     created_at: datetime
 
 

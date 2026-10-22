@@ -369,6 +369,21 @@ def test_api_does_not_accept_ui_cookie(client):
     assert client.get("/api/projects").status_code == 401
 
 
+def test_project_modal_and_progress(client):
+    register_via_ui(client)
+    projects_page = client.get("/projects")
+    assert 'data-open-project-modal' in projects_page.text
+    assert "<dialog" in projects_page.text
+    assert "projects.js" in projects_page.text
+
+    project_id = create_project_via_ui(client)
+    board = client.get(f"/projects/{project_id}")
+    assert 'class="progress"' in board.text
+
+    projects_page = client.get("/projects")
+    assert "کار انجام شده" in projects_page.text
+
+
 def test_static_assets_are_served(client):
     css = client.get("/static/style.css")
     js = client.get("/static/board.js")

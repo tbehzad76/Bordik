@@ -186,6 +186,14 @@ def _board_for(db, project_id: int, user: User):
 
 
 def _board_context(project: Project, membership: ProjectMember) -> dict:
+    done_column_ids = {column.id for column in project.columns if column.is_done}
+    total = sum(len(column.cards) for column in project.columns)
+    done = sum(
+        1
+        for column in project.columns
+        for card in column.cards
+        if card.column_id in done_column_ids
+    )
     return {
         "project": project,
         "membership": membership,
@@ -194,6 +202,11 @@ def _board_context(project: Project, membership: ProjectMember) -> dict:
         "columns": project.columns,
         "is_owner": membership.role == "owner",
         "today": date.today(),
+        "progress": {
+            "total": total,
+            "done": done,
+            "percent": round(done / total * 100) if total else 0,
+        },
     }
 
 
@@ -371,19 +384,30 @@ def projects_page(
                 .order_by(Project.created_at.desc(), Project.id.desc())
             ).all()
         )
-        project_rows = [
-            {
-                "project": project,
-                "role": roles[project.id],
-                "card_count": db.scalar(
-                    select(func.count(Task.id)).where(
-                        Task.project_id == project.id
-                    )
+        project_rows = []
+        for project in projects:
+            total = db.scalar(
+                select(func.count(Task.id)).where(Task.project_id == project.id)
+            ) or 0
+            done = db.scalar(
+                select(func.count(Task.id))
+                .join(BoardColumn, Task.column_id == BoardColumn.id)
+                .where(
+                    Task.project_id == project.id,
+                    BoardColumn.is_done.is_(True),
                 )
-                or 0,
-            }
-            for project in projects
-        ]
+            ) or 0
+            project_rows.append(
+                {
+                    "project": project,
+                    "role": roles[project.id],
+                    "progress": {
+                        "total": total,
+                        "done": done,
+                        "percent": round(done / total * 100) if total else 0,
+                    },
+                }
+            )
 
     return _render_page(
         request,

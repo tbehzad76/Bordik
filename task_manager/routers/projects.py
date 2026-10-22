@@ -54,6 +54,15 @@ DEFAULT_COLUMNS: tuple[tuple[str, bool], ...] = (
 
 
 def _summary(project: Project, role: str) -> ProjectSummary:
+    done_column_ids = {column.id for column in project.columns if column.is_done}
+    total = sum(len(column.cards) for column in project.columns)
+    done = sum(
+        1
+        for column in project.columns
+        for card in column.cards
+        if card.column_id in done_column_ids
+    )
+    percent = round(done / total * 100) if total else 0
     return ProjectSummary(
         id=project.id,
         name=project.name,
@@ -61,7 +70,9 @@ def _summary(project: Project, role: str) -> ProjectSummary:
         owner_id=project.owner_id,
         role=role,
         member_count=len(project.members),
-        card_count=sum(len(column.cards) for column in project.columns),
+        card_count=total,
+        done_count=done,
+        progress_percent=percent,
         created_at=project.created_at,
     )
 
