@@ -39,6 +39,7 @@ def test_create_and_list_projects(client, headers):
 
     assert project["name"] == "Alpha"
     assert project["description"] == "desc"
+    assert project["color"] == "blue"
     assert project["role"] == "owner"
     assert [column["name"] for column in project["columns"]] == [
         "برای انجام",
@@ -189,12 +190,19 @@ def test_card_assignees_and_update(client, headers):
 
     updated = client.patch(
         f"/api/projects/{project['id']}/cards/{card_id}",
-        json={"title": "Renamed card", "assignee_ids": []},
+        json={"title": "Renamed card"},
         headers=member_headers,
     )
     assert updated.status_code == 200
     assert updated.json()["title"] == "Renamed card"
-    assert updated.json()["assignees"] == []
+    assert [user["id"] for user in updated.json()["assignees"]] == [member_id]
+
+    rejected = client.patch(
+        f"/api/projects/{project['id']}/cards/{card_id}",
+        json={"assignee_ids": []},
+        headers=member_headers,
+    )
+    assert rejected.status_code == 400
 
     assigned = client.put(
         f"/api/projects/{project['id']}/cards/{card_id}/assignees",
@@ -315,6 +323,77 @@ def test_project_progress(client, headers):
     ).json()
     done_column = next(column for column in board["columns"] if column["is_done"])
     assert len(done_column["cards"]) == 1
+
+
+def test_project_color_and_validation(client, headers):
+    project = create_project(client, headers, name="Colored", color="teal")
+    assert project["color"] == "teal"
+
+    board = client.get(f"/api/projects/{project['id']}", headers=headers).json()
+    assert board["color"] == "teal"
+
+    invalid = client.post(
+        "/api/projects",
+        json={"name": "Bad", "color": "pink"},
+        headers=headers,
+    )
+    assert invalid.status_code == 422
+
+
+def test_card_defaults_to_creator_as_assignee(client, headers):
+    project = create_project(client, headers)
+    me = client.get("/api/auth/me", headers=headers).json()["id"]
+
+    card = client.post(
+        f"/api/projects/{project['id']}/cards",
+        json={"title": "Mine", "column_id": project["columns"][0]["id"]},
+        headers=headers,
+    )
+
+    assert card.status_code == 201
+    assert [user["id"] for user in card.json()["assignees"]] == [me]
+
+
+def test_priority_and_my_tasks(client, headers):
+    project = create_project(client, headers)
+    column_id = project["columns"][0]["id"]
+    me = client.get("/api/auth/me", headers=headers).json()["id"]
+
+    def make(title, priority, due_in_days=None):
+        payload = {
+            "title": title,
+            "column_id": column_id,
+            "priority": priority,
+            "assignee_ids": [me],
+        }
+        if due_in_days is not None:
+            payload["due_in_days"] = due_in_days
+        response = client.post(
+            f"/api/projects/{project['id']}/cards",
+            json=payload,
+            headers=headers,
+        )
+        assert response.status_code == 201, response.text
+        return response.json()
+
+    make("Low task", "low", 10)
+    make("Urgent task", "urgent", 5)
+    make("High task", "high", 1)
+
+    tasks = client.get("/api/my/tasks", headers=headers).json()
+    assert [task["title"] for task in tasks] == [
+        "Urgent task",
+        "High task",
+        "Low task",
+    ]
+    assert tasks[0]["priority"] == "urgent"
+    assert tasks[0]["project_color"] == "blue"
+    assert tasks[0]["due_date_jalali"]
+
+    only_open = client.get(
+        "/api/my/tasks?include_done=false", headers=headers
+    ).json()
+    assert len(only_open) == 3
 
 
 def test_update_and_delete_project(client, headers):

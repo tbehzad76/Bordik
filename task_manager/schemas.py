@@ -11,6 +11,7 @@ from pydantic import (
 )
 
 from .jalali import format_jalali
+from .palette import DEFAULT_PROJECT_COLOR, is_valid_project_color
 from .phones import normalize_phone
 
 
@@ -81,6 +82,7 @@ class Token(BaseModel):
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     description: str | None = Field(default=None, max_length=2000)
+    color: str = DEFAULT_PROJECT_COLOR
 
     @field_validator("name")
     @classmethod
@@ -90,10 +92,18 @@ class ProjectCreate(BaseModel):
             raise ValueError("project name must not be blank")
         return value
 
+    @field_validator("color")
+    @classmethod
+    def clean_color(cls, value: str) -> str:
+        if not is_valid_project_color(value):
+            raise ValueError("unknown project color")
+        return value
+
 
 class ProjectUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=120)
     description: str | None = Field(default=None, max_length=2000)
+    color: str | None = None
 
     @field_validator("name")
     @classmethod
@@ -105,10 +115,21 @@ class ProjectUpdate(BaseModel):
             raise ValueError("project name must not be blank")
         return value
 
+    @field_validator("color")
+    @classmethod
+    def clean_color(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        if not is_valid_project_color(value):
+            raise ValueError("unknown project color")
+        return value
+
     @model_validator(mode="after")
     def name_cannot_be_null(self) -> "ProjectUpdate":
         if "name" in self.model_fields_set and self.name is None:
             raise ValueError("name cannot be null")
+        if "color" in self.model_fields_set and self.color is None:
+            raise ValueError("color cannot be null")
         return self
 
 
@@ -116,6 +137,7 @@ class ProjectSummary(BaseModel):
     id: int
     name: str
     description: str | None
+    color: str
     owner_id: int
     role: str
     member_count: int
@@ -197,6 +219,7 @@ class CardCreate(BaseModel):
     description: str | None = Field(default=None, max_length=5000)
     column_id: int | None = None
     assignee_ids: list[int] = Field(default_factory=list)
+    priority: Literal["low", "normal", "high", "urgent"] = "normal"
     due_date: date | None = None
     due_in_days: int | None = Field(default=None, ge=0, le=3650)
 
@@ -219,6 +242,7 @@ class CardUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=5000)
     assignee_ids: list[int] | None = None
+    priority: Literal["low", "normal", "high", "urgent"] | None = None
     due_date: date | None = None
     due_in_days: int | None = Field(default=None, ge=0, le=3650)
 
@@ -236,6 +260,8 @@ class CardUpdate(BaseModel):
     def validate_fields(self) -> "CardUpdate":
         if "title" in self.model_fields_set and self.title is None:
             raise ValueError("title cannot be null")
+        if "priority" in self.model_fields_set and self.priority is None:
+            raise ValueError("priority cannot be null")
         if self.due_date is not None and self.due_in_days is not None:
             raise ValueError("set either due_date or due_in_days, not both")
         return self
@@ -258,6 +284,7 @@ class CardRead(BaseModel):
     column_id: int
     title: str
     description: str | None
+    priority: str
     due_date: date | None
     position: int
     created_at: datetime
@@ -293,8 +320,22 @@ class BoardRead(BaseModel):
     id: int
     name: str
     description: str | None
+    color: str
     owner_id: int
     role: str
     members: list[MemberRead]
     invitations: list[InvitationRead]
     columns: list[ColumnRead]
+
+
+class MyTaskRead(BaseModel):
+    id: int
+    title: str
+    priority: str
+    due_date: date | None
+    due_date_jalali: str | None
+    days_remaining: int | None
+    is_done: bool
+    project_id: int
+    project_name: str
+    project_color: str

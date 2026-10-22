@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}کارهای من | بوردیک{% endblock %}
+{% block content %}
+<section class="tasks-hero">
+  <div>
+    <p class="eyebrow">اولویت‌بندی</p>
+    <h1>کارهای من</h1>
+    <p class="muted">مرتب‌شده بر اساس اولویت و نزدیک‌ترین سررسید.</p>
+  </div>
+</section>
+
+<nav class="tabs" aria-label="فیلتر کارها">
+  <a class="tab {% if scope == 'mine' %}is-active{% endif %}" href="/my-tasks?scope=mine&amp;include_done={{ include_done }}">فقط من</a>
+  <a class="tab {% if scope == 'all' %}is-active{% endif %}" href="/my-tasks?scope=all&amp;include_done={{ include_done }}">همهٔ پروژه‌های من</a>
+  <a class="tab {% if include_done != '1' %}is-active{% endif %}" href="/my-tasks?scope={{ scope }}&amp;include_done={% if include_done == '1' %}0{% else %}1{% endif %}">
+    {% if include_done == "1" %}فقط انجام‌نشده‌ها{% else %}نمایش انجام‌شده‌ها{% endif %}
+  </a>
+</nav>
+
+{% if rows %}
+<ul class="my-task-list">
+  {% for row in rows %}
+  <li class="card my-task-row {% if row.is_done %}is-done{% endif %}">
+    <span class="badge {{ PRIORITY_CLASSES.get(row.task.priority, 'priority-normal') }}">
+      {{ row.task.priority | priority_label }}
+    </span>
+    <div class="my-task-main">
+      <a class="my-task-title" href="/projects/{{ row.project.id }}/cards/{{ row.task.id }}">
+        {{ row.task.title }}
+      </a>
+      <div class="my-task-meta">
+        <span class="project-dot color-{{ row.project.color }}"></span>
+        <span>{{ row.project.name }}</span>
+        {% if row.task.due_date %}
+        <span>· سررسید {{ row.task.due_date | jdate }}</span>
+        {% if row.days is not none %}
+        <span class="due-badge {% if row.days < 0 %}is-overdue{% elif row.days <= 2 %}is-soon{% endif %}">
+          {% if row.days < 0 %}{{ -row.days }} روز تأخیر{% elif row.days == 0 %}امروز{% elif row.days == 1 %}فردا{% else %}{{ row.days }} روز مانده{% endif %}
+        </span>
+        {% endif %}
+        {% endif %}
+        {% if row.is_done %}<span class="badge badge-success">انجام‌شده</span>{% endif %}
+      </div>
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<div class="card empty-state">
+  <span class="empty-mark" aria-hidden="true"></span>
+  <h2>کاری برای نمایش نیست</h2>
+  <p class="muted">یا وظیفه‌ای به تو سپرده نشده، یا فیلترها را طوری تنظیم کرده‌ای که چیزی نمانده است.</p>
+</div>
+{% endif %}
+{% endblock %}

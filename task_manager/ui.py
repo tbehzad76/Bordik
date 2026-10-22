@@ -6,7 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Form, Header, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.exc import IntegrityError
 
 from .config import Settings
@@ -18,7 +18,24 @@ from .dependencies import (
     OptionalUser,
 )
 from .jalali import format_jalali, format_jalali_datetime, parse_jalali
-from .models import BoardColumn, Project, ProjectInvitation, ProjectMember, Task, User
+from .models import (
+    BoardColumn,
+    Project,
+    ProjectInvitation,
+    ProjectMember,
+    Task,
+    User,
+    task_assignees,
+)
+from .notifications import notify_new_task
+from .palette import (
+    PRIORITY_CLASSES,
+    PRIORITY_LABELS,
+    PRIORITY_ORDER,
+    PROJECT_COLORS,
+    PROJECT_COLOR_LABELS,
+    is_valid_project_color,
+)
 from .permissions import (
     can_delete_card,
     ensure_project_members,
@@ -50,6 +67,13 @@ TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 templates.env.filters["jdate"] = format_jalali
 templates.env.filters["jdatetime"] = format_jalali_datetime
+templates.env.filters["priority_label"] = lambda value: PRIORITY_LABELS.get(
+    value, value
+)
+templates.env.globals["PRIORITY_LABELS"] = PRIORITY_LABELS
+templates.env.globals["PRIORITY_CLASSES"] = PRIORITY_CLASSES
+templates.env.globals["PROJECT_COLORS"] = PROJECT_COLORS
+templates.env.globals["PROJECT_COLOR_LABELS"] = PROJECT_COLOR_LABELS
 
 router = APIRouter(include_in_schema=False)
 
@@ -339,6 +363,70 @@ def register_submit(
     return response
 
 
+@router.get("/my-tasks", response_class=HTMLResponse)
+def my_tasks_page(
+    request: Request,
+    db: DbSession,
+    settings: AppSettings,
+    user: OptionalUser,
+    scope: str = "mine",
+    include_done: str = "1",
+) -> Response:
+    if user is None:
+        return _redirect("/login")
+
+    project_ids = list(
+        db.scalars(
+            select(ProjectMember.project_id).where(
+                ProjectMember.user_id == user.id
+            )
+        ).all()
+    )
+    rows = []
+    if project_ids:
+        statement = (
+            select(Task, Project, BoardColumn.is_done)
+            .join(Project, Task.project_id == Project.id)
+            .join(BoardColumn, Task.column_id == BoardColumn.id)
+            .where(Task.project_id.in_(project_ids))
+        )
+        if scope != "all":
+            statement = statement.join(
+                task_assignees, Task.id == task_assignees.c.task_id
+            ).where(task_assignees.c.user_id == user.id)
+        if include_done != "1":
+            statement = statement.where(BoardColumn.is_done.is_(False))
+        statement = statement.order_by(
+            case(PRIORITY_ORDER, value=Task.priority, else_=2),
+            Task.due_date.is_(None),
+            Task.due_date,
+            Task.id,
+        )
+        for task, project, is_done in db.execute(statement).all():
+            rows.append(
+                {
+                    "task": task,
+                    "project": project,
+                    "is_done": bool(is_done),
+                    "days": (
+                        (task.due_date - date.today()).days
+                        if task.due_date
+                        else None
+                    ),
+                }
+            )
+
+    return _render_page(
+        request,
+        "my_tasks.html",
+        settings,
+        user=user,
+        rows=rows,
+        scope=scope,
+        include_done=include_done,
+    )
+
+
 @router.post("/logout")
 def logout(settings: AppSettings, _csrf: CsrfProtected) -> Response:
     response = _redirect("/login")
@@ -425,17 +513,23 @@ def create_project_form(
     name: ProjectName,
     _csrf: CsrfProtected,
     description: ProjectDescription = "",
+    color: Annotated[str, Form(max_length=20)] = "blue",
 ) -> Response:
     if user is None:
         return _redirect("/login")
     try:
-        payload = ProjectCreate(name=name, description=description.strip() or None)
+        payload = ProjectCreate(
+            name=name,
+            description=description.strip() or None,
+            color=color if is_valid_project_color(color) else "blue",
+        )
     except ValueError:
         return _redirect("/projects")
 
     project = Project(
         name=payload.name,
         description=payload.description,
+        color=payload.color,
         owner_id=user.id,
     )
     db.add(project)
@@ -486,6 +580,7 @@ def edit_project_form(
     name: ProjectName,
     _csrf: CsrfProtected,
     description: ProjectDescription = "",
+    color: Annotated[str, Form(max_length=20)] = "blue",
 ) -> Response:
     if user is None:
         return _redirect("/login")
@@ -495,6 +590,8 @@ def edit_project_form(
     if membership.role == "owner":
         project.name = name.strip()
         project.description = description.strip() or None
+        if is_valid_project_color(color):
+            project.color = color
         db.commit()
     return _redirect(f"/projects/{project_id}")
 
@@ -697,18 +794,23 @@ def create_card_form(
     project_id: int,
     db: DbSession,
     user: OptionalUser,
+    settings: AppSettings,
     title: CardTitle,
     _csrf: CsrfProtected,
     column_id: Annotated[int | None, Form()] = None,
     description: CardDescription = "",
     due_date: Annotated[str | None, Form()] = None,
     due_in_days: Annotated[int | None, Form()] = None,
+    priority: Annotated[str, Form(max_length=10)] = "normal",
+    assignee_ids: Annotated[list[int], Form()] = [],
 ) -> Response:
     if user is None:
         return _redirect("/login")
     project, membership = _board_for(db, project_id, user)
     if membership is None:
         return _redirect("/projects")
+
+    assignee_ids = assignee_ids or [user.id]
 
     if column_id is None:
         column = db.scalar(
@@ -723,20 +825,22 @@ def create_card_form(
         return _redirect(f"/projects/{project_id}")
 
     due_value = _parse_due_date(due_date)
-    db.add(
-        Task(
-            project_id=project.id,
-            column_id=column.id,
-            title=title.strip(),
-            description=description.strip() or None,
-            due_date=resolve_due_date(
-                due_value, None if due_value is not None else due_in_days
-            ),
-            position=next_position(db, column.id),
-            created_by_id=user.id,
-        )
+    card = Task(
+        project_id=project.id,
+        column_id=column.id,
+        title=title.strip(),
+        description=description.strip() or None,
+        priority=priority if priority in PRIORITY_LABELS else "normal",
+        due_date=resolve_due_date(
+            due_value, None if due_value is not None else due_in_days
+        ),
+        position=next_position(db, column.id),
+        created_by_id=user.id,
+        assignees=ensure_project_members(db, project_id, assignee_ids),
     )
+    db.add(card)
     db.commit()
+    notify_new_task(db, card, settings)
     return _redirect(f"/projects/{project_id}")
 
 
@@ -778,6 +882,7 @@ def edit_card_form(
     _csrf: CsrfProtected,
     description: CardDescription = "",
     assignee_ids: Annotated[list[int], Form()] = [],
+    priority: Annotated[str, Form(max_length=10)] = "normal",
     due_date: Annotated[str | None, Form()] = None,
     due_in_days: Annotated[int | None, Form()] = None,
     clear_due: Annotated[str | None, Form()] = None,
@@ -791,10 +896,13 @@ def edit_card_form(
     card = get_task(db, project_id, card_id)
     card.title = title.strip()
     card.description = description.strip() or None
+    if priority in PRIORITY_LABELS:
+        card.priority = priority
     if column_id != card.column_id:
         target = get_column(db, project_id, column_id)
         move_task(db, card, target, 0)
-    card.assignees = ensure_project_members(db, project_id, assignee_ids)
+    if assignee_ids:
+        card.assignees = ensure_project_members(db, project_id, assignee_ids)
 
     if clear_due == "on":
         card.due_date = None

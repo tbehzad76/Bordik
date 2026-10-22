@@ -87,4 +87,46 @@
       window.location.reload();
     });
   });
+
+  const cardModal = document.getElementById("card-modal");
+  if (cardModal) {
+    const columnInput = cardModal.querySelector('input[name="column_id"]');
+
+    function openCardModal(columnId) {
+      if (columnInput) {
+        columnInput.value = columnId;
+      }
+      if (typeof cardModal.showModal === "function") {
+        cardModal.showModal();
+      } else {
+        cardModal.setAttribute("open", "open");
+      }
+      const titleInput = cardModal.querySelector('input[name="title"]');
+      if (titleInput) {
+        titleInput.focus();
+      }
+    }
+
+    function closeCardModal() {
+      if (typeof cardModal.close === "function") {
+        cardModal.close();
+      } else {
+        cardModal.removeAttribute("open");
+      }
+    }
+
+    document.querySelectorAll("[data-add-card]").forEach((button) => {
+      button.addEventListener("click", () => openCardModal(button.dataset.columnId));
+    });
+
+    document.querySelectorAll("[data-close-card-modal]").forEach((button) => {
+      button.addEventListener("click", closeCardModal);
+    });
+
+    cardModal.addEventListener("click", (event) => {
+      if (event.target === cardModal) {
+        closeCardModal();
+      }
+    });
+  }
 })();

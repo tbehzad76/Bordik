@@ -41,6 +41,14 @@
           {% endfor %}
         </select>
       </div>
+      <div class="field">
+        <label for="card-priority">اولویت</label>
+        <select id="card-priority" name="priority">
+          {% for key, label in PRIORITY_LABELS.items() %}
+          <option value="{{ key }}" {% if key == card.priority %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
       <div class="due-fields">
         <div class="field">
           <label for="card-due-date">تاریخ سررسید (جلالی)</label>
@@ -66,12 +74,12 @@
       </label>
       {% endif %}
       <fieldset class="field assignee-field">
-        <legend>مسئولان کارت</legend>
+        <legend>مسئولان کارت (حداقل یک نفر)</legend>
         {% if members %}
         <div class="assignee-list">
           {% for member in members %}
           <label class="check-line">
-            <input type="checkbox" name="assignee_ids" value="{{ member.user_id }}"
+            <input type="checkbox" name="assignee_ids" value="{{ member.user_id }}" required
                    {% if member.user_id in card.assignees | map(attribute='id') | list %}checked{% endif %}>
             <span>{{ member.user.full_name }} <span dir="ltr" class="muted">{{ member.user.phone }}</span></span>
           </label>

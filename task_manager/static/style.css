@@ -1285,3 +1285,161 @@ select:focus {
 .board-progress .progress-text {
   white-space: nowrap;
 }
+
+.color-blue { --project-color: #2563eb; }
+.color-green { --project-color: #16a34a; }
+.color-purple { --project-color: #7c3aed; }
+.color-orange { --project-color: #ea580c; }
+.color-rose { --project-color: #e11d48; }
+.color-teal { --project-color: #0d9488; }
+.color-slate { --project-color: #475569; }
+
+.project-color-strip {
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+  background: var(--project-color, var(--primary));
+}
+
+.project-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--project-color, var(--primary));
+  flex-shrink: 0;
+}
+
+.progress {
+  --project-color: var(--primary);
+}
+
+.progress::-webkit-progress-value {
+  background: var(--project-color);
+}
+
+.progress::-moz-progress-bar {
+  background: var(--project-color);
+}
+
+.badge.priority-low {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+.badge.priority-normal {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.badge.priority-high {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #c2410c;
+}
+
+.badge.priority-urgent {
+  background: var(--danger-soft);
+  border-color: #fecaca;
+  color: var(--danger);
+}
+
+.card-mini-top {
+  display: flex;
+}
+
+.add-card-button {
+  width: 100%;
+  margin-top: 0.6rem;
+}
+
+.color-choices {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.7rem 0.9rem;
+}
+
+.color-choices legend {
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding-inline: 0.35rem;
+}
+
+.color-choice-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.color-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.color-choice input {
+  width: auto;
+}
+
+.color-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--line);
+  background: var(--project-color, var(--primary));
+}
+
+.color-name {
+  color: var(--muted);
+}
+
+.my-task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.my-task-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.85rem 1rem;
+}
+
+.my-task-main {
+  min-width: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.my-task-title {
+  color: var(--text);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.my-task-title:hover {
+  color: var(--primary);
+}
+
+.my-task-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.my-task-row.is-done .my-task-title {
+  color: var(--muted);
+  text-decoration: line-through;
+}

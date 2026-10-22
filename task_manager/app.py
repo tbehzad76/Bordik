@@ -9,7 +9,7 @@ from sqlalchemy import inspect, text
 from . import models, ui  # noqa: F401
 from .config import Settings, get_settings
 from .database import Base, build_engine, build_session_factory
-from .routers import auth, projects
+from .routers import auth, projects, tasks
 from .rubika import run_polling
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -37,6 +37,27 @@ def _prepare_schema(engine, settings: Settings) -> None:
             with engine.begin() as connection:
                 connection.execute(
                     text("ALTER TABLE tasks ADD COLUMN due_date DATE")
+                )
+        if "priority" not in task_columns:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "ALTER TABLE tasks ADD COLUMN priority "
+                        "VARCHAR(10) NOT NULL DEFAULT 'normal'"
+                    )
+                )
+
+    if "projects" in tables:
+        project_columns = {
+            column["name"] for column in inspector.get_columns("projects")
+        }
+        if "color" not in project_columns:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "ALTER TABLE projects ADD COLUMN color "
+                        "VARCHAR(20) NOT NULL DEFAULT 'blue'"
+                    )
                 )
 
 
@@ -78,6 +99,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(auth.router)
     app.include_router(projects.router)
+    app.include_router(tasks.router)
     app.include_router(ui.router)
 
     @app.middleware("http")

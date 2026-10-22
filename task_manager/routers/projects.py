@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
-from ..dependencies import CurrentUser, DbSession
+from ..dependencies import AppSettings, CurrentUser, DbSession
 from ..models import (
     BoardColumn,
     Project,
@@ -11,6 +11,7 @@ from ..models import (
     Task,
     User,
 )
+from ..notifications import notify_new_task
 from ..permissions import (
     ensure_project_members,
     get_column,
@@ -67,6 +68,7 @@ def _summary(project: Project, role: str) -> ProjectSummary:
         id=project.id,
         name=project.name,
         description=project.description,
+        color=project.color,
         owner_id=project.owner_id,
         role=role,
         member_count=len(project.members),
@@ -89,6 +91,7 @@ def _board(db, project_id: int, user: User) -> BoardRead:
         id=project.id,
         name=project.name,
         description=project.description,
+        color=project.color,
         owner_id=project.owner_id,
         role=membership.role,
         members=project.members,
@@ -132,6 +135,7 @@ def create_project(
     project = Project(
         name=payload.name,
         description=payload.description,
+        color=payload.color,
         owner_id=current_user.id,
     )
     db.add(project)
@@ -426,6 +430,7 @@ def create_card(
     payload: CardCreate,
     db: DbSession,
     current_user: CurrentUser,
+    settings: AppSettings,
 ) -> Task:
     project, _ = require_project_access(db, project_id, current_user)
 
@@ -444,12 +449,14 @@ def create_card(
     else:
         column = get_column(db, project_id, payload.column_id)
 
-    assignees = ensure_project_members(db, project_id, payload.assignee_ids)
+    assignee_ids = payload.assignee_ids or [current_user.id]
+    assignees = ensure_project_members(db, project_id, assignee_ids)
     card = Task(
         project_id=project.id,
         column_id=column.id,
         title=payload.title,
         description=payload.description,
+        priority=payload.priority,
         due_date=resolve_due_date(payload.due_date, payload.due_in_days),
         position=next_position(db, column.id),
         created_by_id=current_user.id,
@@ -457,6 +464,7 @@ def create_card(
     )
     db.add(card)
     db.commit()
+    notify_new_task(db, card, settings)
     db.refresh(card)
     return card
 
@@ -498,6 +506,11 @@ def update_card(
         card.due_date = resolve_due_date(None, due_in_days)
 
     if assignee_ids is not None:
+        if not assignee_ids:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A card must have at least one assignee",
+            )
         card.assignees = ensure_project_members(db, project_id, assignee_ids)
 
     db.commit()

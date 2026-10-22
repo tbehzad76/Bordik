@@ -1,8 +1,12 @@
 {% extends "base.html" %}
 {% block title %}{{ project.name }} | بوردیک{% endblock %}
-{% block head_extra %}<meta name="csrf-token" content="{{ csrf_token }}">{% endblock %}
+{% block head_extra %}
+<meta name="csrf-token" content="{{ csrf_token }}">
+<link rel="stylesheet" href="{{ url_for('static', path='/vendor/jalalidatepicker/jalalidatepicker.min.css') }}">
+{% endblock %}
 {% block content %}
 <section class="board-head">
+  <div class="project-color-strip color-{{ project.color }}"></div>
   <div>
     <a class="back-link" href="/projects">بازگشت به پروژه‌ها</a>
     <h1>{{ project.name }}</h1>
@@ -32,11 +36,62 @@
 </section>
 
 <div class="board-progress">
-  <progress class="progress" value="{{ progress.done }}" max="{{ progress.total or 1 }}"></progress>
+  <progress class="progress color-{{ project.color }}" value="{{ progress.done }}" max="{{ progress.total or 1 }}"></progress>
   <span class="progress-text">
     {{ progress.done }} از {{ progress.total }} کار انجام شده ({{ progress.percent }}٪)
   </span>
 </div>
+
+<dialog id="card-modal" class="modal" aria-labelledby="card-modal-title">
+  <form class="stack" method="post" action="/projects/{{ project.id }}/cards">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="column_id" value="">
+    <h2 id="card-modal-title">کارت جدید</h2>
+    <div class="field">
+      <label for="new-card-title">عنوان</label>
+      <input id="new-card-title" name="title" type="text" required maxlength="200"
+             placeholder="مثلاً آماده‌کردن گزارش" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="new-card-description">توضیحات <span class="optional">(اختیاری)</span></label>
+      <textarea id="new-card-description" name="description" rows="3" maxlength="5000"></textarea>
+    </div>
+    <div class="due-fields">
+      <div class="field">
+        <label for="new-card-due">سررسید (جلالی)</label>
+        <input id="new-card-due" name="due_date" type="text" data-jdp data-jdp-only-date
+               placeholder="۱۴۰۳/۰۵/۱۲" autocomplete="off" inputmode="numeric" maxlength="10">
+      </div>
+      <div class="field">
+        <label for="new-card-days">یا تعداد روز</label>
+        <input id="new-card-days" name="due_in_days" type="number" min="0" max="3650">
+      </div>
+    </div>
+    <div class="field">
+      <label for="new-card-priority">اولویت</label>
+      <select id="new-card-priority" name="priority">
+        {% for key, label in PRIORITY_LABELS.items() %}
+        <option value="{{ key }}" {% if key == "normal" %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <fieldset class="field assignee-field">
+      <legend>مسئول انجام (حداقل یک نفر)</legend>
+      <div class="assignee-list">
+        {% for member in members %}
+        <label class="check-line">
+          <input type="checkbox" name="assignee_ids" value="{{ member.user_id }}" required>
+          <span>{{ member.user.full_name }} <span dir="ltr" class="muted">{{ member.user.phone }}</span></span>
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">ساخت کارت</button>
+      <button class="btn btn-ghost" type="button" data-close-card-modal>انصراف</button>
+    </div>
+  </form>
+</dialog>
 
 <div class="board-layout">
   <div class="board" data-board data-project-id="{{ project.id }}">
@@ -79,6 +134,11 @@
       <div class="card-list" data-card-list>
         {% for card in column.cards %}
         <article class="card card-mini" data-card-id="{{ card.id }}">
+          <div class="card-mini-top">
+            <span class="badge {{ PRIORITY_CLASSES.get(card.priority, 'priority-normal') }}">
+              {{ card.priority | priority_label }}
+            </span>
+          </div>
           <a class="card-mini-title" href="/projects/{{ project.id }}/cards/{{ card.id }}">
             {{ card.title }}
           </a>
@@ -102,13 +162,8 @@
         {% endfor %}
       </div>
 
-      <form class="add-card-form" method="post" action="/projects/{{ project.id }}/cards">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <input type="hidden" name="column_id" value="{{ column.id }}">
-        <input name="title" type="text" placeholder="افزودن کارت..." required
-               maxlength="200" autocomplete="off">
-        <button class="btn btn-ghost btn-small" type="submit">افزودن</button>
-      </form>
+      <button class="btn btn-ghost btn-small add-card-button" type="button"
+              data-add-card data-column-id="{{ column.id }}">افزودن کارت</button>
     </section>
     {% endfor %}
 
@@ -187,5 +242,7 @@
 </div>
 {% endblock %}
 {% block scripts %}
+<script src="{{ url_for('static', path='/vendor/jalalidatepicker/jalalidatepicker.min.js') }}" defer></script>
+<script src="{{ url_for('static', path='/jalali-init.js') }}" defer></script>
 <script src="{{ url_for('static', path='/board.js') }}" defer></script>
 {% endblock %}

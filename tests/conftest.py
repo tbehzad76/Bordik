@@ -33,10 +33,13 @@ def auth_headers(client, phone="09120000001", password=DEFAULT_PASSWORD):
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
-def create_project(client, headers, name="Test Project", description=None):
+def create_project(client, headers, name="Test Project", description=None, color=None):
+    payload = {"name": name, "description": description}
+    if color is not None:
+        payload["color"] = color
     response = client.post(
         "/api/projects",
-        json={"name": name, "description": description},
+        json=payload,
         headers=headers,
     )
     assert response.status_code == 201, response.text

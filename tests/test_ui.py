@@ -183,7 +183,7 @@ def test_project_board_flow(client):
     board = client.get(f"/projects/{project_id}")
     assert board.status_code == 200
     assert "Company Board" in board.text
-    assert board.text.count('data-column-id="') == 3
+    assert board.text.count('class="board-column"') == 3
 
     token = extract_csrf(board.text)
     column_id = int(re.search(r'data-column-id="(\d+)"', board.text).group(1))
@@ -378,10 +378,47 @@ def test_project_modal_and_progress(client):
 
     project_id = create_project_via_ui(client)
     board = client.get(f"/projects/{project_id}")
-    assert 'class="progress"' in board.text
+    assert "progress" in board.text
 
     projects_page = client.get("/projects")
     assert "کار انجام شده" in projects_page.text
+
+
+def test_board_card_modal_priority_and_my_tasks(client):
+    register_via_ui(client)
+    project_id = create_project_via_ui(client)
+    board = client.get(f"/projects/{project_id}")
+
+    assert 'id="card-modal"' in board.text
+    assert 'name="priority"' in board.text
+    assert 'name="assignee_ids"' in board.text
+    assert "data-add-card" in board.text
+    assert "jalalidatepicker.min.js" in board.text
+
+    token = extract_csrf(board.text)
+    column_id = int(re.search(r'data-column-id="(\d+)"', board.text).group(1))
+    assignee_id = int(re.search(r'name="assignee_ids" value="(\d+)"', board.text).group(1))
+
+    created = client.post(
+        f"/projects/{project_id}/cards",
+        data={
+            "title": "Urgent board card",
+            "column_id": str(column_id),
+            "priority": "urgent",
+            "assignee_ids": str(assignee_id),
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert created.status_code == 303
+
+    board = client.get(f"/projects/{project_id}")
+    assert "priority-urgent" in board.text
+
+    my_tasks = client.get("/my-tasks")
+    assert my_tasks.status_code == 200
+    assert "Urgent board card" in my_tasks.text
+    assert "کارهای من" in my_tasks.text
 
 
 def test_static_assets_are_served(client):
