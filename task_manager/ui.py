@@ -20,6 +20,7 @@ from .dependencies import (
 from .jalali import format_jalali, format_jalali_datetime, parse_jalali
 from .models import (
     BoardColumn,
+    Notification,
     Project,
     ProjectInvitation,
     ProjectMember,
@@ -83,7 +84,7 @@ DEFAULT_COLUMNS = (
     ("انجام‌شده", True),
 )
 
-ASSET_VERSION = "8"
+ASSET_VERSION = "9"
 
 FormPhone = Annotated[str, Form(min_length=1, max_length=30)]
 FormPassword = Annotated[str, Form(min_length=1, max_length=128)]
@@ -428,6 +429,74 @@ def my_tasks_page(
         scope=scope,
         include_done=include_done,
     )
+
+
+@router.get("/ui/notifications/feed", include_in_schema=False)
+def notifications_feed(db: DbSession, user: OptionalUser) -> Response:
+    if user is None:
+        return JSONResponse({"items": [], "unread": 0}, status_code=401)
+
+    items = list(
+        db.scalars(
+            select(Notification)
+            .where(Notification.user_id == user.id)
+            .order_by(Notification.id.desc())
+            .limit(20)
+        ).all()
+    )
+    unread = db.scalar(
+        select(func.count(Notification.id)).where(
+            Notification.user_id == user.id,
+            Notification.is_read.is_(False),
+        )
+    ) or 0
+    return JSONResponse(
+        {
+            "unread": unread,
+            "items": [
+                {
+                    "id": item.id,
+                    "title": item.title,
+                    "body": item.body,
+                    "url": item.url,
+                    "is_read": item.is_read,
+                    "created_at": item.created_at.isoformat(),
+                }
+                for item in items
+            ],
+        }
+    )
+
+
+@router.post("/ui/notifications/read", include_in_schema=False)
+async def notifications_read(
+    request: Request,
+    db: DbSession,
+    user: OptionalUser,
+    _csrf: CsrfHeaderProtected,
+) -> Response:
+    if user is None:
+        return JSONResponse({"ok": False}, status_code=401)
+
+    try:
+        payload = await request.json()
+    except Exception:  # noqa: BLE001 - empty body means "mark everything"
+        payload = {}
+
+    statement = select(Notification).where(
+        Notification.user_id == user.id,
+        Notification.is_read.is_(False),
+    )
+    ids = payload.get("ids") if isinstance(payload, dict) else None
+    if isinstance(ids, list) and ids:
+        numeric_ids = [int(value) for value in ids if str(value).isdigit()]
+        if numeric_ids:
+            statement = statement.where(Notification.id.in_(numeric_ids))
+
+    for notification in db.scalars(statement).all():
+        notification.is_read = True
+    db.commit()
+    return JSONResponse({"ok": True})
 
 
 @router.post("/logout")

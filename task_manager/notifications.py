@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from .config import Settings
 from .jalali import format_jalali
-from .models import RubikaLink, Task
+from .models import Notification, RubikaLink, Task, User
 from .palette import PRIORITY_LABELS
 
 logger = logging.getLogger(__name__)
@@ -21,17 +21,41 @@ def build_new_task_message(task: Task) -> str:
     return "\n".join(lines)
 
 
+def create_task_notifications(db: Session, task: Task) -> list[Notification]:
+    """Store an in-app notification for every assignee of the task."""
+    created: list[Notification] = []
+    project_name = task.project.name if task.project is not None else ""
+    body = f"پروژه: {project_name} · اولویت: {PRIORITY_LABELS.get(task.priority, 'معمولی')}"
+    if task.due_date is not None:
+        body += f" · سررسید: {format_jalali(task.due_date)}"
+
+    for assignee in task.assignees:
+        notification = Notification(
+            user_id=assignee.id,
+            title=f"وظیفه جدید: {task.title}",
+            body=body,
+            url=f"/projects/{task.project_id}/cards/{task.id}",
+        )
+        db.add(notification)
+        created.append(notification)
+    if created:
+        db.commit()
+    return created
+
+
 def notify_new_task(
     db: Session,
     task: Task,
     settings: Settings,
     client=None,
 ) -> list[str]:
-    """Send the new-card notification to linked assignees.
+    """Store in-app notifications and push them to linked Rubika accounts.
 
-    Returns the list of chat ids that were messaged. When the Rubika bot is
-    disabled the call is a safe no-op so it can be wired in unconditionally.
+    Returns the list of Rubika chat ids that were messaged. Storage happens even
+    when the Rubika bot is disabled; the browser UI polls those rows.
     """
+    create_task_notifications(db, task)
+
     assignee_ids = [assignee.id for assignee in task.assignees]
     if not assignee_ids:
         return []

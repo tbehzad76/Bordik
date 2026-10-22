@@ -22,6 +22,21 @@
         <a class="nav-link" href="/my-tasks">وظایف من</a>
       </nav>
       <div class="user-area">
+        <span class="notif" id="notif"
+              data-feed-url="/ui/notifications/feed"
+              data-read-url="/ui/notifications/read"
+              data-csrf="{{ csrf_token }}">
+          <button class="icon-btn notif-bell" type="button" id="notif-bell" title="اعلان‌ها">
+            اعلان‌ها<span class="notif-count" id="notif-count" hidden></span>
+          </button>
+          <div class="notif-panel" id="notif-panel" hidden>
+            <div class="notif-head">اعلان‌ها</div>
+            <ul class="notif-list" id="notif-list"></ul>
+            <button class="btn btn-ghost btn-small notif-enable" type="button" id="notif-enable" hidden>
+              فعال‌سازی اعلان مرورگر
+            </button>
+          </div>
+        </span>
         <span class="user-email" title="{{ user.full_name }}">{{ user.full_name }}</span>
         <form method="post" action="/logout">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -40,6 +55,7 @@
     <div class="container">ساخته‌شده با FastAPI و PostgreSQL · {{ current_year }}</div>
   </footer>
 
+  <script src="{{ url_for('static', path='/notifications.js') }}?v={{ asset_version }}" defer></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

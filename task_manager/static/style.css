@@ -1523,6 +1523,105 @@ select:focus {
   font-weight: 600;
 }
 
+.notif {
+  position: relative;
+}
+
+.notif-bell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0 0.6rem;
+  width: auto;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.notif-count {
+  min-width: 1.2rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.68rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.notif-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  width: min(320px, calc(100vw - 2rem));
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+  padding: 0.6rem;
+  z-index: 70;
+}
+
+.notif-head {
+  font-weight: 800;
+  font-size: 0.85rem;
+  padding: 0.2rem 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.notif-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.notif-item {
+  padding: 0.5rem 0.4rem;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 0.2rem;
+}
+
+.notif-item:last-child {
+  border-bottom: 0;
+}
+
+.notif-item a {
+  color: var(--text);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.notif-item.is-unread a::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--primary);
+  margin-inline-end: 0.4rem;
+  vertical-align: middle;
+}
+
+.notif-body {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.notif-empty {
+  padding: 0.7rem 0.4rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.notif-enable {
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
 form.has-error .assignee-field {
   border-color: #fecaca;
   background: #fff5f5;

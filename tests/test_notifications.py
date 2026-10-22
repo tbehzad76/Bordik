@@ -4,6 +4,7 @@ from task_manager.config import Settings
 from task_manager.database import Base, build_engine, build_session_factory
 from task_manager.models import (
     BoardColumn,
+    Notification,
     Project,
     ProjectMember,
     RubikaLink,
@@ -80,10 +81,16 @@ def test_build_message_contains_details(task_with_assignee):
     assert "فوری" in message
 
 
-def test_notify_disabled_is_noop(session, task_with_assignee):
+def test_notify_disabled_still_stores_in_app_notification(session, task_with_assignee):
     settings = Settings(jwt_secret_key="x" * 40, rubika_enabled=False)
 
-    assert notify_new_task(session, task_with_assignee, settings) == []
+    sent = notify_new_task(session, task_with_assignee, settings)
+
+    assert sent == []
+    stored = session.query(Notification).all()
+    assert len(stored) == 1
+    assert stored[0].user_id == task_with_assignee.assignees[0].id
+    assert "Huge task" in stored[0].title
 
 
 def test_notify_sends_to_linked_assignees(session, task_with_assignee):
@@ -99,3 +106,4 @@ def test_notify_sends_to_linked_assignees(session, task_with_assignee):
     assert sent == ["555"]
     assert client.sent[0][0] == "555"
     assert "Huge task" in client.sent[0][1]
+    assert session.query(Notification).count() == 1

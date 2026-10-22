@@ -510,6 +510,45 @@ def test_my_tasks_done_filter(client):
     assert 'name="include_done" value="1"' in with_done.text
 
 
+def test_browser_notification_feed(client):
+    register_via_ui(client)
+    project_id = create_project_via_ui(client)
+    board = client.get(f"/projects/{project_id}")
+    assert "notif-panel" in board.text
+    assert "notifications.js" in board.text
+
+    token = extract_csrf(board.text)
+    column_id = int(re.search(r'data-column-id="(\d+)"', board.text).group(1))
+    assignee_id = int(
+        re.search(r'name="assignee_ids" value="(\d+)"', board.text).group(1)
+    )
+    created = client.post(
+        f"/projects/{project_id}/cards",
+        data={
+            "title": "Notify me",
+            "column_id": str(column_id),
+            "assignee_ids": str(assignee_id),
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert created.status_code == 303
+
+    feed = client.get("/ui/notifications/feed")
+    assert feed.status_code == 200
+    data = feed.json()
+    assert data["unread"] == 1
+    assert "Notify me" in data["items"][0]["title"]
+
+    read = client.post(
+        "/ui/notifications/read",
+        json={"all": True},
+        headers={"X-CSRF-Token": token},
+    )
+    assert read.status_code == 200
+    assert client.get("/ui/notifications/feed").json()["unread"] == 0
+
+
 def test_static_assets_are_served(client):
     css = client.get("/static/style.css")
     js = client.get("/static/board.js")
