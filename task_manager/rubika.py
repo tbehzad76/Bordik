@@ -20,8 +20,8 @@ HELP_TEXT = (
     "دستورات بوردیک:\n"
     "/link 09121234567  اتصال این چت به حساب بوردیک\n"
     "/tasks  لیست وظایف من\n"
-    "/add نام پروژه | عنوان کارت  افزودن کارت\n"
-    "/done 12  انجام‌شده کردن کارت شماره ۱۲"
+    "/add نام پروژه | عنوان وظیفه  افزودن وظیفه\n"
+    "/done 12  انجام‌شده کردن وظیفه شماره ۱۲"
 )
 
 
@@ -211,12 +211,12 @@ def _list_tasks(db: Session, user: User) -> str:
 
 def _add_task(db: Session, user: User, argument: str) -> str:
     if "|" not in argument:
-        return "قالب درست: /add نام پروژه | عنوان کارت"
+        return "قالب درست: /add نام پروژه | عنوان وظیفه"
     project_name, _, title = argument.partition("|")
     project_name = project_name.strip()
     title = title.strip()
     if not project_name or not title:
-        return "نام پروژه و عنوان کارت را کامل بنویس."
+        return "نام پروژه و عنوان وظیفه را کامل بنویس."
 
     memberships = list(
         db.scalars(
@@ -256,12 +256,12 @@ def _add_task(db: Session, user: User, argument: str) -> str:
     db.add(task)
     db.commit()
     db.refresh(task)
-    return f"کارت #{task.id} در «{project.name}» ساخته شد."
+    return f"وظیفه #{task.id} در «{project.name}» ساخته شد."
 
 
 def _done_task(db: Session, user: User, argument: str) -> str:
     if not argument.strip().isdigit():
-        return "شماره کارت را بده: /done 12"
+        return "شماره وظیفه را بده: /done 12"
 
     project_ids = _user_project_ids(db, user.id)
     if not project_ids:
@@ -273,7 +273,7 @@ def _done_task(db: Session, user: User, argument: str) -> str:
         .options(selectinload(Task.column))
     )
     if task is None:
-        return "کارت با این شماره پیدا نشد."
+        return "وظیفه با این شماره پیدا نشد."
 
     done_column = db.scalar(
         select(BoardColumn)
@@ -289,7 +289,7 @@ def _done_task(db: Session, user: User, argument: str) -> str:
 
     if task.column_id != done_column.id:
         move_task(db, task, done_column, 0)
-    return f"کارت #{task.id} انجام‌شده شد."
+    return f"وظیفه #{task.id} انجام‌شده شد."
 
 
 def _handle_in_session(session_factory, chat_id: str, text: str) -> str:

@@ -5,7 +5,7 @@
   <div>
     <p class="eyebrow">پروژه‌ها</p>
     <h1>پروژه‌های من</h1>
-    <p class="muted">پروژه بسازید و کارهای تیم را در برد مشترک مدیریت کنید.</p>
+    <p class="muted">پروژه بسازید و وظایف تیم را در برد مشترک مدیریت کنید.</p>
   </div>
   <button class="btn btn-primary" type="button" data-open-project-modal>پروژه جدید</button>
 </section>
@@ -60,11 +60,11 @@
     <div class="project-progress">
       <progress class="progress color-{{ row.project.color }}" value="{{ row.progress.done }}" max="{{ row.progress.total or 1 }}"></progress>
       <span class="progress-text">
-        {{ row.progress.done }} از {{ row.progress.total }} کار انجام شده ({{ row.progress.percent }}٪)
+        {{ row.progress.done }} از {{ row.progress.total }} وظیفه انجام شده ({{ row.progress.percent }}٪)
       </span>
     </div>
     <div class="project-card-foot">
-      <span>{{ row.progress.total }} کارت</span>
+      <span>{{ row.progress.total }} وظیفه</span>
       <span>ساخت: {{ row.project.created_at | jdate }}</span>
     </div>
   </a>
@@ -79,5 +79,5 @@
 {% endif %}
 {% endblock %}
 {% block scripts %}
-<script src="{{ url_for('static', path='/projects.js') }}" defer></script>
+<script src="{{ url_for('static', path='/projects.js') }}?v={{ asset_version }}" defer></script>
 {% endblock %}

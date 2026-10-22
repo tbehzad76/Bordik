@@ -7,7 +7,7 @@
   <title>{% block title %}بوردیک{% endblock %}</title>
   {% block head_extra %}{% endblock %}
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%232563eb'/%3E%3Cpath d='M18 33l9 9 19-20' fill='none' stroke='white' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}?v={{ asset_version }}">
 </head>
 <body>
   <header class="site-header">
@@ -19,7 +19,7 @@
       {% if user %}
       <nav class="header-nav">
         <a class="nav-link" href="/projects">پروژه‌ها</a>
-        <a class="nav-link" href="/my-tasks">کارهای من</a>
+        <a class="nav-link" href="/my-tasks">وظایف من</a>
       </nav>
       <div class="user-area">
         <span class="user-email" title="{{ user.full_name }}">{{ user.full_name }}</span>

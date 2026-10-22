@@ -142,7 +142,7 @@ def test_done_task(session):
         .one()
     )
     assert card.column_id == done_column.id
-    assert "شماره کارت" in handle_text(session, "111", "/done abc")
+    assert "شماره وظیفه" in handle_text(session, "111", "/done abc")
 
 
 def test_extract_updates_variants():

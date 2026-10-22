@@ -83,6 +83,8 @@ DEFAULT_COLUMNS = (
     ("انجام‌شده", True),
 )
 
+ASSET_VERSION = "5"
+
 FormPhone = Annotated[str, Form(min_length=1, max_length=30)]
 FormPassword = Annotated[str, Form(min_length=1, max_length=128)]
 FormName = Annotated[str, Form(min_length=1, max_length=100)]
@@ -177,6 +179,7 @@ def _render_page(
             "user": user,
             "csrf_token": csrf_token,
             "current_year": datetime.now(UTC).year,
+            "asset_version": ASSET_VERSION,
             **context,
         },
     )

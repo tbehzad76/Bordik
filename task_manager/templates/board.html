@@ -2,7 +2,7 @@
 {% block title %}{{ project.name }} | بوردیک{% endblock %}
 {% block head_extra %}
 <meta name="csrf-token" content="{{ csrf_token }}">
-<link rel="stylesheet" href="{{ url_for('static', path='/vendor/jalalidatepicker/jalalidatepicker.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='/vendor/jalalidatepicker/jalalidatepicker.min.css') }}?v={{ asset_version }}">
 {% endblock %}
 {% block content %}
 <section class="board-head">
@@ -38,15 +38,15 @@
 <div class="board-progress">
   <progress class="progress color-{{ project.color }}" value="{{ progress.done }}" max="{{ progress.total or 1 }}"></progress>
   <span class="progress-text">
-    {{ progress.done }} از {{ progress.total }} کار انجام شده ({{ progress.percent }}٪)
+    {{ progress.done }} از {{ progress.total }} وظیفه انجام شده ({{ progress.percent }}٪)
   </span>
 </div>
 
 <dialog id="card-modal" class="modal" aria-labelledby="card-modal-title">
-  <form class="stack" method="post" action="/projects/{{ project.id }}/cards">
+  <form class="stack" method="post" action="/projects/{{ project.id }}/cards" data-require-assignee>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="column_id" value="">
-    <h2 id="card-modal-title">کارت جدید</h2>
+    <h2 id="card-modal-title">وظیفه جدید</h2>
     <div class="field">
       <label for="new-card-title">عنوان</label>
       <input id="new-card-title" name="title" type="text" required maxlength="200"
@@ -80,14 +80,15 @@
       <div class="assignee-list">
         {% for member in members %}
         <label class="check-line">
-          <input type="checkbox" name="assignee_ids" value="{{ member.user_id }}" required>
+          <input type="checkbox" name="assignee_ids" value="{{ member.user_id }}">
           <span>{{ member.user.full_name }} <span dir="ltr" class="muted">{{ member.user.phone }}</span></span>
         </label>
         {% endfor %}
       </div>
+      <p class="field-error" data-assignee-error hidden>حداقل یک مسئول را انتخاب کنید.</p>
     </fieldset>
     <div class="form-actions">
-      <button class="btn btn-primary" type="submit">ساخت کارت</button>
+      <button class="btn btn-primary" type="submit">ساخت وظیفه</button>
       <button class="btn btn-ghost" type="button" data-close-card-modal>انصراف</button>
     </div>
   </form>
@@ -163,7 +164,7 @@
       </div>
 
       <button class="btn btn-ghost btn-small add-card-button" type="button"
-              data-add-card data-column-id="{{ column.id }}">افزودن کارت</button>
+              data-add-card data-column-id="{{ column.id }}">افزودن وظیفه</button>
     </section>
     {% endfor %}
 
@@ -242,7 +243,8 @@
 </div>
 {% endblock %}
 {% block scripts %}
-<script src="{{ url_for('static', path='/vendor/jalalidatepicker/jalalidatepicker.min.js') }}" defer></script>
-<script src="{{ url_for('static', path='/jalali-init.js') }}" defer></script>
-<script src="{{ url_for('static', path='/board.js') }}" defer></script>
+<script src="{{ url_for('static', path='/vendor/jalalidatepicker/jalalidatepicker.min.js') }}?v={{ asset_version }}" defer></script>
+<script src="{{ url_for('static', path='/jalali-init.js') }}?v={{ asset_version }}" defer></script>
+<script src="{{ url_for('static', path='/assignee-check.js') }}?v={{ asset_version }}" defer></script>
+<script src="{{ url_for('static', path='/board.js') }}?v={{ asset_version }}" defer></script>
 {% endblock %}

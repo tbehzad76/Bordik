@@ -381,7 +381,7 @@ def test_project_modal_and_progress(client):
     assert "progress" in board.text
 
     projects_page = client.get("/projects")
-    assert "کار انجام شده" in projects_page.text
+    assert "وظیفه انجام شده" in projects_page.text
 
 
 def test_board_card_modal_priority_and_my_tasks(client):
@@ -394,6 +394,10 @@ def test_board_card_modal_priority_and_my_tasks(client):
     assert 'name="assignee_ids"' in board.text
     assert "data-add-card" in board.text
     assert "jalalidatepicker.min.js" in board.text
+    assert "data-require-assignee" in board.text
+    assert "assignee-check.js" in board.text
+    assert "?v=" in board.text
+    assert re.search(r'name="assignee_ids" value="\d+"[^>]*required', board.text) is None
 
     token = extract_csrf(board.text)
     column_id = int(re.search(r'data-column-id="(\d+)"', board.text).group(1))
@@ -418,7 +422,7 @@ def test_board_card_modal_priority_and_my_tasks(client):
     my_tasks = client.get("/my-tasks")
     assert my_tasks.status_code == 200
     assert "Urgent board card" in my_tasks.text
-    assert "کارهای من" in my_tasks.text
+    assert "وظایف من" in my_tasks.text
 
 
 def test_static_assets_are_served(client):

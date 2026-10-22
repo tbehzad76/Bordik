@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def build_new_task_message(task: Task) -> str:
-    lines = [f"کارت جدید: {task.title}"]
+    lines = [f"وظیفه جدید: {task.title}"]
     if task.project is not None:
         lines.append(f"پروژه: {task.project.name}")
     if task.due_date is not None:

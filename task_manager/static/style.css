@@ -1443,3 +1443,15 @@ select:focus {
   color: var(--muted);
   text-decoration: line-through;
 }
+
+.field-error {
+  margin: 0.35rem 0 0;
+  color: var(--danger);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+form.has-error .assignee-field {
+  border-color: #fecaca;
+  background: #fff5f5;
+}

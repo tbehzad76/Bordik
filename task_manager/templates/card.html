@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ card.title }} | {{ project.name }}{% endblock %}
 {% block head_extra %}
-<link rel="stylesheet" href="{{ url_for('static', path='/vendor/jalalidatepicker/jalalidatepicker.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='/vendor/jalalidatepicker/jalalidatepicker.min.css') }}?v={{ asset_version }}">
 {% endblock %}
 {% block content %}
 <section class="board-head">
@@ -17,8 +17,8 @@
 
 <div class="card-detail">
   <section class="card side-card">
-    <h2>ویرایش کارت</h2>
-    <form class="stack" method="post"
+    <h2>ویرایش وظیفه</h2>
+    <form class="stack" method="post" data-require-assignee
           action="/projects/{{ project.id }}/cards/{{ card.id }}/edit">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="field">
@@ -74,17 +74,18 @@
       </label>
       {% endif %}
       <fieldset class="field assignee-field">
-        <legend>مسئولان کارت (حداقل یک نفر)</legend>
+        <legend>مسئولان وظیفه (حداقل یک نفر)</legend>
         {% if members %}
         <div class="assignee-list">
           {% for member in members %}
           <label class="check-line">
-            <input type="checkbox" name="assignee_ids" value="{{ member.user_id }}" required
+            <input type="checkbox" name="assignee_ids" value="{{ member.user_id }}"
                    {% if member.user_id in card.assignees | map(attribute='id') | list %}checked{% endif %}>
             <span>{{ member.user.full_name }} <span dir="ltr" class="muted">{{ member.user.phone }}</span></span>
           </label>
           {% endfor %}
         </div>
+        <p class="field-error" data-assignee-error hidden>حداقل یک مسئول را انتخاب کنید.</p>
         {% else %}
         <p class="muted">هنوز عضوی به پروژه اضافه نشده است.</p>
         {% endif %}
@@ -98,7 +99,7 @@
   <aside class="card side-card">
     <h2>جزئیات</h2>
     <dl class="detail-list">
-      <dt>شناسه کارت</dt>
+      <dt>شناسه وظیفه</dt>
       <dd>{{ card.id }}</dd>
       <dt>ساخته‌شده</dt>
       <dd>{{ card.created_at | jdatetime }}</dd>
@@ -108,15 +109,16 @@
     {% if can_delete %}
     <form method="post" action="/projects/{{ project.id }}/cards/{{ card.id }}/delete">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <button class="btn btn-danger btn-block" type="submit">حذف کارت</button>
+      <button class="btn btn-danger btn-block" type="submit">حذف وظیفه</button>
     </form>
     {% else %}
-    <p class="muted">فقط سازنده این کارت می‌تواند آن را حذف کند.</p>
+    <p class="muted">فقط سازنده این وظیفه می‌تواند آن را حذف کند.</p>
     {% endif %}
   </aside>
 </div>
 {% endblock %}
 {% block scripts %}
-<script src="{{ url_for('static', path='/vendor/jalalidatepicker/jalalidatepicker.min.js') }}" defer></script>
-<script src="{{ url_for('static', path='/jalali-init.js') }}" defer></script>
+<script src="{{ url_for('static', path='/vendor/jalalidatepicker/jalalidatepicker.min.js') }}?v={{ asset_version }}" defer></script>
+<script src="{{ url_for('static', path='/jalali-init.js') }}?v={{ asset_version }}" defer></script>
+<script src="{{ url_for('static', path='/assignee-check.js') }}?v={{ asset_version }}" defer></script>
 {% endblock %}
