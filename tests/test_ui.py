@@ -517,6 +517,7 @@ def test_browser_notification_feed(client):
     board = client.get(f"/projects/{project_id}")
     assert "notif-panel" in board.text
     assert "notifications.js" in board.text
+    assert "notif-hint" in board.text
 
     token = extract_csrf(board.text)
     column_id = int(re.search(r'data-column-id="(\d+)"', board.text).group(1))

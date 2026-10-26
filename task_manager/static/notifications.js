@@ -12,6 +12,7 @@
   var panel = document.getElementById("notif-panel");
   var list = document.getElementById("notif-list");
   var enable = document.getElementById("notif-enable");
+  var hint = document.getElementById("notif-hint");
 
   var lastSeen = Number(window.localStorage.getItem("bordik_last_notif") || 0);
   var firstLoad = true;
@@ -20,11 +21,35 @@
     return "Notification" in window;
   }
 
+  function isSecureContext() {
+    return window.isSecureContext || location.hostname === "localhost" || location.hostname === "127.0.0.1";
+  }
+
+  function showHint(message) {
+    if (!hint) {
+      return;
+    }
+    hint.textContent = message;
+    hint.hidden = false;
+  }
+
   function updateEnableButton() {
     if (!enable) {
       return;
     }
-    enable.hidden = !supportsNotifications() || Notification.permission === "granted";
+    if (!supportsNotifications() || !isSecureContext()) {
+      enable.hidden = true;
+      showHint("اعلان مرورگر فقط روی HTTPS (یا localhost) کار می‌کند. برای استفاده از اعلان بومی، سایت را با HTTPS باز کن.");
+      return;
+    }
+    if (Notification.permission === "granted") {
+      enable.hidden = true;
+      return;
+    }
+    enable.hidden = false;
+    if (Notification.permission === "denied") {
+      showHint("مجوز اعلان در مرورگر بسته است. از تنظیمات سایت در مرورگر، اعلان را روی «اجازه» بگذار و صفحه را رفرش کن.");
+    }
   }
 
   function updateCount(unread) {
@@ -157,11 +182,31 @@
 
   if (enable) {
     enable.addEventListener("click", function () {
-      if (!supportsNotifications()) {
+      if (!supportsNotifications() || !isSecureContext()) {
+        updateEnableButton();
         return;
       }
-      Notification.requestPermission().then(updateEnableButton);
+      var result = Notification.requestPermission();
+      if (result && typeof result.then === "function") {
+        result.then(handlePermission);
+      }
     });
+  }
+
+  function handlePermission(permission) {
+    updateEnableButton();
+    if (permission === "granted") {
+      showHint("اعلان مرورگر فعال شد.");
+      try {
+        new Notification("اعلان فعال شد", {
+          body: "از این پس وظایف جدید برای تو اینجا نمایش داده می‌شوند.",
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    } else if (permission === "denied") {
+      showHint("مجوز اعلان بسته شد. از تنظیمات سایت در مرورگر، اعلان را «اجازه» کن.");
+    }
   }
 
   updateEnableButton();

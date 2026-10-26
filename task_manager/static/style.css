@@ -1646,6 +1646,13 @@ select:focus {
   width: 100%;
 }
 
+.notif-hint {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.7;
+}
+
 form.has-error .assignee-field {
   border-color: #fecaca;
   background: #fff5f5;
