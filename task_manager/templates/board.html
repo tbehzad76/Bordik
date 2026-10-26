@@ -43,6 +43,11 @@
       </fieldset>
       <button class="btn btn-primary btn-small" type="submit">ذخیره</button>
     </form>
+    <form method="post" action="/projects/{{ project.id }}/delete"
+          data-confirm="آیا از حذف این پروژه و همهٔ وظایفش مطمئنی؟">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="btn btn-danger btn-small" type="submit">حذف پروژه</button>
+    </form>
   </details>
   {% endif %}
 </section>

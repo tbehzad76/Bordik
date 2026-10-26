@@ -84,7 +84,7 @@ DEFAULT_COLUMNS = (
     ("انجام‌شده", True),
 )
 
-ASSET_VERSION = "13"
+ASSET_VERSION = "14"
 
 FormPhone = Annotated[str, Form(min_length=1, max_length=30)]
 FormPassword = Annotated[str, Form(min_length=1, max_length=128)]
@@ -365,6 +365,24 @@ def register_submit(
     response = _redirect("/projects")
     _set_auth_cookie(response, user.id, settings)
     return response
+
+
+@router.post("/projects/{project_id}/delete")
+def delete_project_form(
+    project_id: int,
+    db: DbSession,
+    user: OptionalUser,
+    _csrf: CsrfProtected,
+) -> Response:
+    if user is None:
+        return _redirect("/login")
+    project, membership = _board_for(db, project_id, user)
+    if membership is None:
+        return _redirect("/projects")
+    if membership.role == "owner":
+        db.delete(project)
+        db.commit()
+    return _redirect("/projects")
 
 
 @router.get("/my-tasks", response_class=HTMLResponse)

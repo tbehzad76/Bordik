@@ -928,11 +928,15 @@ textarea:focus {
 }
 
 .icon-btn {
+  display: grid;
+  place-items: center;
+  padding: 0;
   border: 1px solid var(--line);
   background: #fff;
   border-radius: 9px;
   width: 30px;
   height: 30px;
+  font-size: 1.05rem;
   line-height: 1;
   cursor: pointer;
   color: var(--muted);

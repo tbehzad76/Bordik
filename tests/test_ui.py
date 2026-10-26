@@ -554,12 +554,31 @@ def test_browser_notification_feed(client):
     assert client.get("/ui/notifications/feed").json()["unread"] == 0
 
 
+def test_owner_can_delete_project_via_ui(client):
+    register_via_ui(client)
+    project_id = create_project_via_ui(client, name="Delete me")
+    board = client.get(f"/projects/{project_id}")
+    assert f"/projects/{project_id}/delete" in board.text
+    assert "data-confirm" in board.text
+
+    token = extract_csrf(board.text)
+    response = client.post(
+        f"/projects/{project_id}/delete",
+        data={"csrf_token": token},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/projects"
+    assert "Delete me" not in client.get("/projects").text
+
+
 def test_static_assets_are_served(client):
     css = client.get("/static/style.css")
     js = client.get("/static/board.js")
     picker_js = client.get("/static/vendor/jalalidatepicker/jalalidatepicker.min.js")
     picker_css = client.get("/static/vendor/jalalidatepicker/jalalidatepicker.min.css")
     picker_init = client.get("/static/jalali-init.js")
+    confirm_js = client.get("/static/confirm-submit.js")
     font = client.get("/static/fonts/Vazirmatn-Regular.ttf")
 
     assert css.status_code == 200
@@ -572,6 +591,9 @@ def test_static_assets_are_served(client):
     assert picker_css.status_code == 200
     assert picker_init.status_code == 200
     assert "jalaliDatepicker" in picker_init.text
+    assert confirm_js.status_code == 200
+    assert "confirm-submit" not in confirm_js.text or "window.confirm" in confirm_js.text
+    assert "place-items: center" in css.text
     assert font.status_code == 200
     assert len(font.content) > 1000
 
