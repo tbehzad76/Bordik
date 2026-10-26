@@ -619,6 +619,42 @@ def test_task_modal_edit_returns_to_board(client):
     assert "Modal edited" in client.get(f"/projects/{project_id}").text
 
 
+def test_done_column_hides_overdue(client):
+    register_via_ui(client)
+    project_id = create_project_via_ui(client)
+    board = client.get(f"/projects/{project_id}")
+    token = extract_csrf(board.text)
+    columns = list(dict.fromkeys(re.findall(r'data-column-id="(\d+)"', board.text)))
+    assignee_id = int(
+        re.search(r'name="assignee_ids" value="(\d+)"', board.text).group(1)
+    )
+    client.post(
+        f"/projects/{project_id}/cards",
+        data={
+            "title": "Overdue task",
+            "column_id": columns[0],
+            "due_date": "1400/01/01",
+            "assignee_ids": str(assignee_id),
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    board = client.get(f"/projects/{project_id}")
+    assert "روز تأخیر" in board.text
+    card_id = int(re.search(r'data-card-id="(\d+)"', board.text).group(1))
+
+    moved = client.post(
+        f"/projects/{project_id}/cards/{card_id}/move",
+        json={"column_id": int(columns[2]), "position": 0},
+        headers={"X-CSRF-Token": token},
+    )
+    assert moved.status_code == 200
+
+    board = client.get(f"/projects/{project_id}")
+    assert "روز تأخیر" not in board.text
+    assert "انجام‌شده" in board.text
+
+
 def test_static_assets_are_served(client):
     css = client.get("/static/style.css")
     js = client.get("/static/board.js")

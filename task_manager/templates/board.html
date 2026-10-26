@@ -245,8 +245,7 @@
                  data-edit-url="/projects/{{ project.id }}/cards/{{ card.id }}/edit"
                  data-delete-url="/projects/{{ project.id }}/cards/{{ card.id }}/delete"
                  data-full-url="/projects/{{ project.id }}/cards/{{ card.id }}"
-                 data-can-delete="{{ '1' if card_can_delete else '0' }}">
-          <div class="card-mini-top">
+                 data-can-delete="{{ '1' if card_can_delete else '0' }}">          <div class="card-mini-top">
             <span class="badge {{ PRIORITY_CLASSES.get(card.priority, 'priority-normal') }}">
               {{ card.priority | priority_label }}
             </span>
@@ -254,7 +253,11 @@
           <a class="card-mini-title" href="/projects/{{ project.id }}/cards/{{ card.id }}">
             {{ card.title }}
           </a>
-          {% if card.due_date %}
+          {% if column.is_done %}
+          <span class="done-badge">
+            انجام‌شده{% if card.completed_at %} · {{ card.completed_at | jdate }}{% endif %}
+          </span>
+          {% elif card.due_date %}
           {% set days = (card.due_date - today).days %}
           <span class="due-badge {% if days < 0 %}is-overdue{% elif days <= 2 %}is-soon{% endif %}">
             {% if days < 0 %}{{ -days }} روز تأخیر{% elif days == 0 %}امروز{% elif days == 1 %}فردا{% else %}{{ days }} روز مانده{% endif %}

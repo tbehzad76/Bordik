@@ -46,6 +46,11 @@ def _prepare_schema(engine, settings: Settings) -> None:
                         "VARCHAR(10) NOT NULL DEFAULT 'normal'"
                     )
                 )
+        if "completed_at" not in task_columns:
+            with engine.begin() as connection:
+                connection.execute(
+                    text("ALTER TABLE tasks ADD COLUMN completed_at DATETIME")
+                )
 
     if "projects" in tables:
         project_columns = {

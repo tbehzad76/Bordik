@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from .models import BoardColumn, Project, ProjectMember, Task, User
+from .models import BoardColumn, Project, ProjectMember, Task, User, utc_now
 
 BOARD_LOAD_OPTIONS = (
     selectinload(Project.members).selectinload(ProjectMember.user),
@@ -148,6 +148,14 @@ def next_position(db: Session, column_id: int) -> int:
     return 0 if current is None else int(current) + 1
 
 
+def _sync_completion(task: Task, column: BoardColumn) -> None:
+    if column.is_done:
+        if task.completed_at is None:
+            task.completed_at = utc_now()
+    else:
+        task.completed_at = None
+
+
 def move_task(
     db: Session,
     task: Task,
@@ -170,6 +178,7 @@ def move_task(
         ordered.insert(index, task)
         for position, item in enumerate(ordered):
             item.position = position
+        _sync_completion(task, target_column)
         db.commit()
         db.refresh(task)
         return
@@ -190,5 +199,6 @@ def move_task(
     for position, item in enumerate(target_tasks):
         item.position = position
 
+    _sync_completion(task, target_column)
     db.commit()
     db.refresh(task)

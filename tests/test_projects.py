@@ -420,6 +420,56 @@ def test_assigned_to_me_count(client, headers):
     assert summary["assigned_to_me_count"] == 0
 
 
+def test_completed_at_removes_overdue(client, headers):
+    project = create_project(client, headers)
+    todo = project["columns"][0]["id"]
+    done = project["columns"][2]["id"]
+
+    created = client.post(
+        f"/api/projects/{project['id']}/cards",
+        json={"title": "Late task", "column_id": todo, "due_date": "2020-01-01"},
+        headers=headers,
+    ).json()
+    assert created["completed_at"] is None
+    assert created["days_remaining"] < 0
+
+    moved = client.post(
+        f"/api/projects/{project['id']}/cards/{created['id']}/move",
+        json={"column_id": done, "position": 0},
+        headers=headers,
+    )
+    assert moved.status_code == 200
+    assert moved.json()["completed_at"] is not None
+    assert moved.json()["days_remaining"] is None
+    assert moved.json()["completed_at_jalali"]
+
+    mine = [
+        item
+        for item in client.get(
+            "/api/my/tasks?include_done=true", headers=headers
+        ).json()
+        if item["id"] == created["id"]
+    ][0]
+    assert mine["is_done"] is True
+    assert mine["days_remaining"] is None
+    assert mine["completed_at_jalali"]
+
+    back = client.post(
+        f"/api/projects/{project['id']}/cards/{created['id']}/move",
+        json={"column_id": todo, "position": 0},
+        headers=headers,
+    ).json()
+    assert back["completed_at"] is None
+    assert back["days_remaining"] < 0
+
+    born_done = client.post(
+        f"/api/projects/{project['id']}/cards",
+        json={"title": "Born done", "column_id": done},
+        headers=headers,
+    ).json()
+    assert born_done["completed_at"] is not None
+
+
 def test_update_and_delete_project(client, headers):
     project = create_project(client, headers)
 

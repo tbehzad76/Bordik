@@ -10,7 +10,7 @@ from pydantic import (
     model_validator,
 )
 
-from .jalali import format_jalali
+from .jalali import format_jalali, format_jalali_datetime
 from .palette import DEFAULT_PROJECT_COLOR, is_valid_project_color
 from .phones import normalize_phone
 
@@ -290,13 +290,14 @@ class CardRead(BaseModel):
     position: int
     created_at: datetime
     updated_at: datetime
+    completed_at: datetime | None = None
     created_by: UserBrief | None = None
     assignees: list[UserBrief]
 
     @computed_field
     @property
     def days_remaining(self) -> int | None:
-        if self.due_date is None:
+        if self.due_date is None or self.completed_at is not None:
             return None
         return (self.due_date - date.today()).days
 
@@ -306,6 +307,13 @@ class CardRead(BaseModel):
         if self.due_date is None:
             return None
         return format_jalali(self.due_date)
+
+    @computed_field
+    @property
+    def completed_at_jalali(self) -> str | None:
+        if self.completed_at is None:
+            return None
+        return format_jalali_datetime(self.completed_at)
 
 
 class ColumnRead(BaseModel):
@@ -338,6 +346,8 @@ class MyTaskRead(BaseModel):
     due_date_jalali: str | None
     days_remaining: int | None
     is_done: bool
+    completed_at: datetime | None
+    completed_at_jalali: str | None
     project_id: int
     project_name: str
     project_color: str

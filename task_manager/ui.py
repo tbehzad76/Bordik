@@ -27,6 +27,7 @@ from .models import (
     Task,
     User,
     task_assignees,
+    utc_now,
 )
 from .notifications import notify_new_task
 from .palette import (
@@ -84,7 +85,7 @@ DEFAULT_COLUMNS = (
     ("انجام‌شده", True),
 )
 
-ASSET_VERSION = "21"
+ASSET_VERSION = "22"
 
 FormPhone = Annotated[str, Form(min_length=1, max_length=30)]
 FormPassword = Annotated[str, Form(min_length=1, max_length=128)]
@@ -431,9 +432,13 @@ def my_tasks_page(
                     "project": project,
                     "is_done": bool(is_done),
                     "days": (
-                        (task.due_date - date.today()).days
-                        if task.due_date
-                        else None
+                        None
+                        if is_done or task.completed_at is not None
+                        else (
+                            (task.due_date - date.today()).days
+                            if task.due_date
+                            else None
+                        )
                     ),
                 }
             )
@@ -938,6 +943,7 @@ def create_card_form(
         position=next_position(db, column.id),
         created_by_id=user.id,
         assignees=ensure_project_members(db, project_id, assignee_ids),
+        completed_at=utc_now() if column.is_done else None,
     )
     db.add(card)
     db.commit()

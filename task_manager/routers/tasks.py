@@ -5,7 +5,7 @@ from fastapi import APIRouter
 from sqlalchemy import case, select
 
 from ..dependencies import CurrentUser, DbSession
-from ..jalali import format_jalali
+from ..jalali import format_jalali, format_jalali_datetime
 from ..models import BoardColumn, Project, ProjectMember, Task, task_assignees
 from ..palette import PRIORITY_ORDER
 from ..schemas import MyTaskRead
@@ -57,6 +57,9 @@ def my_tasks(
     today = date.today()
     result: list[MyTaskRead] = []
     for task, project, is_done in db.execute(statement).all():
+        days_remaining = None
+        if task.due_date is not None and not is_done and task.completed_at is None:
+            days_remaining = (task.due_date - today).days
         result.append(
             MyTaskRead(
                 id=task.id,
@@ -66,10 +69,14 @@ def my_tasks(
                 due_date_jalali=(
                     format_jalali(task.due_date) if task.due_date else None
                 ),
-                days_remaining=(
-                    (task.due_date - today).days if task.due_date else None
-                ),
+                days_remaining=days_remaining,
                 is_done=bool(is_done),
+                completed_at=task.completed_at,
+                completed_at_jalali=(
+                    format_jalali_datetime(task.completed_at)
+                    if task.completed_at
+                    else None
+                ),
                 project_id=project.id,
                 project_name=project.name,
                 project_color=project.color,

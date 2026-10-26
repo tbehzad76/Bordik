@@ -38,6 +38,12 @@
       <div class="my-task-meta">
         <span class="project-dot color-{{ row.project.color }}"></span>
         <span>{{ row.project.name }}</span>
+        {% if row.is_done %}
+        <span class="badge badge-success">انجام‌شده</span>
+        {% if row.task.completed_at %}
+        <span class="done-badge">تاریخ انجام: {{ row.task.completed_at | jdate }}</span>
+        {% endif %}
+        {% else %}
         {% if row.task.due_date %}
         <span>· سررسید {{ row.task.due_date | jdate }}</span>
         {% if row.days is not none %}
@@ -46,7 +52,7 @@
         </span>
         {% endif %}
         {% endif %}
-        {% if row.is_done %}<span class="badge badge-success">انجام‌شده</span>{% endif %}
+        {% endif %}
       </div>
     </div>
   </li>

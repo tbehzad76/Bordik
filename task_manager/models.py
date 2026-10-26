@@ -191,6 +191,9 @@ class Task(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, onupdate=utc_now
     )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     project: Mapped[Project] = relationship(back_populates="tasks")
     column: Mapped[BoardColumn] = relationship(back_populates="cards")

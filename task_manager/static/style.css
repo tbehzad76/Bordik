@@ -1038,6 +1038,18 @@ textarea:focus {
   color: var(--danger);
 }
 
+.done-badge {
+  align-self: flex-start;
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--success-soft);
+  border: 1px solid #bbf7d0;
+  color: var(--success);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
 .due-fields {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

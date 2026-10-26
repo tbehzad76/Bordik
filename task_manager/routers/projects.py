@@ -11,6 +11,7 @@ from ..models import (
     Task,
     User,
     task_assignees,
+    utc_now,
 )
 from ..notifications import notify_new_task
 from ..permissions import (
@@ -481,6 +482,7 @@ def create_card(
         position=next_position(db, column.id),
         created_by_id=current_user.id,
         assignees=assignees,
+        completed_at=utc_now() if column.is_done else None,
     )
     db.add(card)
     db.commit()
