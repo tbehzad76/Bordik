@@ -1490,6 +1490,11 @@ select:focus {
   display: flex;
 }
 
+.card-mini-creator {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
 .add-card-button {
   width: 100%;
   margin-top: 0.6rem;

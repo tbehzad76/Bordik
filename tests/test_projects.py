@@ -352,6 +352,7 @@ def test_card_defaults_to_creator_as_assignee(client, headers):
 
     assert card.status_code == 201
     assert [user["id"] for user in card.json()["assignees"]] == [me]
+    assert card.json()["created_by"]["id"] == me
 
 
 def test_priority_and_my_tasks(client, headers):

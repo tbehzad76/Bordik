@@ -209,6 +209,8 @@ def test_project_board_flow(client):
     card_page = client.get(f"/projects/{project_id}/cards/{card_id}")
     assert card_page.status_code == 200
     assert "First board card" in card_page.text
+    assert "سازنده" in card_page.text
+    assert "UI User" in card_page.text
 
     edited = client.post(
         f"/projects/{project_id}/cards/{card_id}/edit",

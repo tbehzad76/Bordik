@@ -101,6 +101,8 @@
     <dl class="detail-list">
       <dt>شناسه وظیفه</dt>
       <dd>{{ card.id }}</dd>
+      <dt>سازنده</dt>
+      <dd>{% if card.created_by %}{{ card.created_by.full_name }}{% else %}—{% endif %}</dd>
       <dt>ساخته‌شده</dt>
       <dd>{{ card.created_at | jdatetime }}</dd>
       <dt>آخرین ویرایش</dt>

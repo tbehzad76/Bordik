@@ -10,6 +10,9 @@ BOARD_LOAD_OPTIONS = (
     selectinload(Project.columns)
     .selectinload(BoardColumn.cards)
     .selectinload(Task.assignees),
+    selectinload(Project.columns)
+    .selectinload(BoardColumn.cards)
+    .selectinload(Task.created_by),
 )
 
 
@@ -93,7 +96,7 @@ def get_task(db: Session, project_id: int, task_id: int) -> Task:
     task = db.scalar(
         select(Task)
         .where(Task.id == task_id, Task.project_id == project_id)
-        .options(selectinload(Task.assignees))
+        .options(selectinload(Task.assignees), selectinload(Task.created_by))
     )
     if task is None:
         raise HTTPException(

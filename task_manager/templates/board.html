@@ -181,6 +181,9 @@
           {% if card.description %}
           <p class="card-mini-desc">{{ card.description }}</p>
           {% endif %}
+          <span class="card-mini-creator">
+            سازنده: {{ card.created_by.full_name if card.created_by else "—" }}
+          </span>
           {% if card.assignees %}
           <div class="avatars">
             {% for assignee in card.assignees %}

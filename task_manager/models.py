@@ -194,6 +194,7 @@ class Task(Base):
 
     project: Mapped[Project] = relationship(back_populates="tasks")
     column: Mapped[BoardColumn] = relationship(back_populates="cards")
+    created_by: Mapped[User | None] = relationship(foreign_keys=[created_by_id])
     assignees: Mapped[list[User]] = relationship(
         secondary=task_assignees,
         back_populates="assigned_tasks",

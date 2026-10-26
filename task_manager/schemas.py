@@ -290,6 +290,7 @@ class CardRead(BaseModel):
     position: int
     created_at: datetime
     updated_at: datetime
+    created_by: UserBrief | None = None
     assignees: list[UserBrief]
 
     @computed_field
