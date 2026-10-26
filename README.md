@@ -135,6 +135,8 @@ Authorization: Bearer <access_token>
 فایل‌های آماده در ریشه پروژه: `Dockerfile`، `docker-compose.yml`، `.env.docker.example`.
 اپ **app** هنگام بالا آمدن خودش `alembic upgrade head` را اجرا می‌کند و دیتابیس PostgreSQL در یک volume ماندگار ذخیره می‌شود.
 
+> نسخهٔ پروداکشن `docker-compose.yml` پورت ۸۰۰۰ را منتشر نمی‌کند (`expose` است) و باید یک reverse proxy (مثل Caddy/Nginx) جلوی آن باشد؛ `COOKIE_SECURE=true` است و uvicorn با `--proxy-headers --forwarded-allow-ips` اجرا می‌شود.
+
 ### پیش‌نیاز مشترک
 
 1. Docker و افزونهٔ Compose نصب باشد.
