@@ -862,6 +862,25 @@ textarea:focus {
   flex-shrink: 0;
 }
 
+.head-edit .edit-form {
+  position: static;
+  left: auto;
+  top: auto;
+  width: min(340px, calc(100vw - 3rem));
+  margin-top: 0.5rem;
+}
+
+.head-edit form[data-confirm] {
+  width: min(340px, calc(100vw - 3rem));
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+}
+
+.head-edit form[data-confirm] .btn {
+  width: 100%;
+}
+
 .board-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
