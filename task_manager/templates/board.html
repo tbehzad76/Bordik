@@ -70,6 +70,79 @@
   </span>
 </div>
 
+<dialog id="task-modal" class="modal" aria-labelledby="task-modal-title">
+  <div class="modal-body">
+    <h2 id="task-modal-title">ویرایش وظیفه</h2>
+    <form class="settings-form" method="post" id="task-modal-form" data-require-assignee>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="next" value="/projects/{{ project.id }}">
+      <div class="field">
+        <label for="task-modal-title-input">عنوان</label>
+        <input id="task-modal-title-input" name="title" type="text" required maxlength="200">
+      </div>
+      <div class="field">
+        <label for="task-modal-description">توضیحات</label>
+        <textarea id="task-modal-description" name="description" rows="4" maxlength="5000"></textarea>
+      </div>
+      <div class="field">
+        <label for="task-modal-column">ستون</label>
+        <select id="task-modal-column" name="column_id" required>
+          {% for column in columns %}
+          <option value="{{ column.id }}">{{ column.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="task-modal-priority">اولویت</label>
+        <select id="task-modal-priority" name="priority">
+          {% for key, label in PRIORITY_LABELS.items() %}
+          <option value="{{ key }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="due-fields">
+        <div class="field">
+          <label for="task-modal-due">تاریخ سررسید</label>
+          <input id="task-modal-due" name="due_date" type="text" data-jdp data-jdp-only-date
+                 placeholder="۱۴۰۳/۰۵/۱۲" autocomplete="off" inputmode="numeric" maxlength="10">
+        </div>
+        <div class="field">
+          <label for="task-modal-days">یا تعداد روز</label>
+          <input id="task-modal-days" name="due_in_days" type="number" min="0" max="3650">
+        </div>
+      </div>
+      <label class="check-line">
+        <input type="checkbox" name="clear_due">
+        <span>حذف سررسید</span>
+      </label>
+      <fieldset class="field assignee-field">
+        <legend>مسئولان (حداقل یک نفر)</legend>
+        <div class="assignee-list">
+          {% for member in members %}
+          <label class="check-line">
+            <input type="checkbox" name="assignee_ids" value="{{ member.user_id }}">
+            <span>{{ member.user.full_name }} <span dir="ltr" class="muted">{{ member.user.phone }}</span></span>
+          </label>
+          {% endfor %}
+        </div>
+        <p class="field-error" data-assignee-error hidden>حداقل یک مسئول را انتخاب کنید.</p>
+      </fieldset>
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">ذخیره تغییرات</button>
+        <button class="btn btn-ghost" type="button" data-close-task-modal>بستن</button>
+      </div>
+    </form>
+    <form class="danger-form" method="post" id="task-modal-delete"
+          data-confirm="آیا از حذف این وظیفه مطمئنی؟">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="btn btn-danger btn-block" type="submit">حذف وظیفه</button>
+    </form>
+    <p class="modal-foot">
+      <a id="task-modal-full" href="#">باز کردن صفحهٔ کامل وظیفه</a>
+    </p>
+  </div>
+</dialog>
+
 <dialog id="card-modal" class="modal" aria-labelledby="card-modal-title">
   <form class="stack" method="post" action="/projects/{{ project.id }}/cards" data-require-assignee>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -162,7 +235,17 @@
 
       <div class="card-list" data-card-list>
         {% for card in column.cards %}
-        <article class="card card-mini" data-card-id="{{ card.id }}">
+        {% set card_can_delete = card.created_by_id == user.id or (card.created_by_id is none and is_owner) %}
+        <article class="card card-mini" data-card-id="{{ card.id }}"
+                 data-title="{{ card.title }}"
+                 data-priority="{{ card.priority }}"
+                 data-due="{{ card.due_date | jdate if card.due_date else '' }}"
+                 data-column-id="{{ card.column_id }}"
+                 data-assignees="{{ card.assignees | map(attribute='id') | join(',') }}"
+                 data-edit-url="/projects/{{ project.id }}/cards/{{ card.id }}/edit"
+                 data-delete-url="/projects/{{ project.id }}/cards/{{ card.id }}/delete"
+                 data-full-url="/projects/{{ project.id }}/cards/{{ card.id }}"
+                 data-can-delete="{{ '1' if card_can_delete else '0' }}">
           <div class="card-mini-top">
             <span class="badge {{ PRIORITY_CLASSES.get(card.priority, 'priority-normal') }}">
               {{ card.priority | priority_label }}
@@ -190,6 +273,7 @@
             {% endfor %}
           </div>
           {% endif %}
+          <span class="card-mini-description" hidden>{{ card.description or "" }}</span>
         </article>
         {% endfor %}
       </div>

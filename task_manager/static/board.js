@@ -162,4 +162,90 @@
       }
     });
   }
+
+  const taskModal = document.getElementById("task-modal");
+  if (taskModal) {
+    const form = document.getElementById("task-modal-form");
+    const deleteForm = document.getElementById("task-modal-delete");
+    const fullLink = document.getElementById("task-modal-full");
+    const titleInput = document.getElementById("task-modal-title-input");
+    const descriptionInput = document.getElementById("task-modal-description");
+    const columnSelect = document.getElementById("task-modal-column");
+    const prioritySelect = document.getElementById("task-modal-priority");
+    const dueInput = document.getElementById("task-modal-due");
+    const daysInput = document.getElementById("task-modal-days");
+    const clearDue = form ? form.querySelector('input[name="clear_due"]') : null;
+    const assigneeBoxes = form
+      ? form.querySelectorAll('input[name="assignee_ids"]')
+      : [];
+
+    function openTaskModal(card) {
+      if (form) {
+        form.action = card.dataset.editUrl;
+      }
+      if (titleInput) {
+        titleInput.value = card.dataset.title || "";
+      }
+      if (descriptionInput) {
+        const hidden = card.querySelector(".card-mini-description");
+        descriptionInput.value = hidden ? hidden.textContent : "";
+      }
+      if (columnSelect) {
+        columnSelect.value = card.dataset.columnId || "";
+      }
+      if (prioritySelect) {
+        prioritySelect.value = card.dataset.priority || "normal";
+      }
+      if (dueInput) {
+        dueInput.value = card.dataset.due || "";
+      }
+      if (daysInput) {
+        daysInput.value = "";
+      }
+      if (clearDue) {
+        clearDue.checked = false;
+      }
+      const ids = (card.dataset.assignees || "").split(",").filter(Boolean);
+      assigneeBoxes.forEach((box) => {
+        box.checked = ids.indexOf(box.value) !== -1;
+      });
+      if (deleteForm) {
+        deleteForm.action = card.dataset.deleteUrl;
+        deleteForm.hidden = card.dataset.canDelete !== "1";
+      }
+      if (fullLink) {
+        fullLink.href = card.dataset.fullUrl || "#";
+      }
+      if (typeof taskModal.showModal === "function") {
+        taskModal.showModal();
+      } else {
+        taskModal.setAttribute("open", "open");
+      }
+    }
+
+    function closeTaskModal() {
+      if (typeof taskModal.close === "function") {
+        taskModal.close();
+      } else {
+        taskModal.removeAttribute("open");
+      }
+    }
+
+    document.querySelectorAll(".card-mini").forEach((card) => {
+      card.addEventListener("click", (event) => {
+        event.preventDefault();
+        openTaskModal(card);
+      });
+    });
+
+    document.querySelectorAll("[data-close-task-modal]").forEach((button) => {
+      button.addEventListener("click", closeTaskModal);
+    });
+
+    taskModal.addEventListener("click", (event) => {
+      if (event.target === taskModal) {
+        closeTaskModal();
+      }
+    });
+  }
 })();

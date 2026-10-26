@@ -84,7 +84,7 @@ DEFAULT_COLUMNS = (
     ("انجام‌شده", True),
 )
 
-ASSET_VERSION = "19"
+ASSET_VERSION = "21"
 
 FormPhone = Annotated[str, Form(min_length=1, max_length=30)]
 FormPassword = Annotated[str, Form(min_length=1, max_length=128)]
@@ -987,6 +987,7 @@ def edit_card_form(
     due_date: Annotated[str | None, Form()] = None,
     due_in_days: Annotated[int | None, Form()] = None,
     clear_due: Annotated[str | None, Form()] = None,
+    next: Annotated[str | None, Form()] = None,
 ) -> Response:
     if user is None:
         return _redirect("/login")
@@ -1015,7 +1016,10 @@ def edit_card_form(
             card.due_date = resolve_due_date(None, due_in_days)
 
     db.commit()
-    return _redirect(f"/projects/{project_id}/cards/{card_id}")
+    destination = f"/projects/{project_id}/cards/{card_id}"
+    if next and next.startswith("/") and not next.startswith("//"):
+        destination = next
+    return _redirect(destination)
 
 
 @router.post("/projects/{project_id}/cards/{card_id}/delete")

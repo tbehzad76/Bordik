@@ -395,6 +395,7 @@ def test_board_card_modal_priority_and_my_tasks(client):
     board = client.get(f"/projects/{project_id}")
 
     assert 'id="card-modal"' in board.text
+    assert 'id="task-modal"' in board.text
     assert 'name="priority"' in board.text
     assert 'name="assignee_ids"' in board.text
     assert "data-add-card" in board.text
@@ -424,6 +425,8 @@ def test_board_card_modal_priority_and_my_tasks(client):
 
     board = client.get(f"/projects/{project_id}")
     assert "priority-urgent" in board.text
+    assert "data-edit-url" in board.text
+    assert "data-can-delete=" in board.text
 
     my_tasks = client.get("/my-tasks")
     assert my_tasks.status_code == 200
@@ -575,6 +578,45 @@ def test_owner_can_delete_project_via_ui(client):
     assert response.status_code == 303
     assert response.headers["location"] == "/projects"
     assert "Delete me" not in client.get("/projects").text
+
+
+def test_task_modal_edit_returns_to_board(client):
+    register_via_ui(client)
+    project_id = create_project_via_ui(client)
+    board = client.get(f"/projects/{project_id}")
+    token = extract_csrf(board.text)
+    column_id = int(re.search(r'data-column-id="(\d+)"', board.text).group(1))
+    assignee_id = int(
+        re.search(r'name="assignee_ids" value="(\d+)"', board.text).group(1)
+    )
+    client.post(
+        f"/projects/{project_id}/cards",
+        data={
+            "title": "Modal card",
+            "column_id": str(column_id),
+            "assignee_ids": str(assignee_id),
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    card_id = int(
+        re.search(r'data-card-id="(\d+)"', client.get(f"/projects/{project_id}").text).group(1)
+    )
+
+    edited = client.post(
+        f"/projects/{project_id}/cards/{card_id}/edit",
+        data={
+            "title": "Modal edited",
+            "column_id": str(column_id),
+            "assignee_ids": str(assignee_id),
+            "next": f"/projects/{project_id}",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert edited.status_code == 303
+    assert edited.headers["location"] == f"/projects/{project_id}"
+    assert "Modal edited" in client.get(f"/projects/{project_id}").text
 
 
 def test_static_assets_are_served(client):
