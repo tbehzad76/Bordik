@@ -402,6 +402,7 @@ def test_board_card_modal_priority_and_my_tasks(client):
     assert "data-require-assignee" in board.text
     assert "assignee-check.js" in board.text
     assert "?v=" in board.text
+    assert "(جلالی)" not in board.text
     assert re.search(r'name="assignee_ids" value="\d+"[^>]*required', board.text) is None
 
     token = extract_csrf(board.text)

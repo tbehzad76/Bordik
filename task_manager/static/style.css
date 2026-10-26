@@ -73,7 +73,8 @@ a:hover {
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
 }
 
@@ -1191,10 +1192,17 @@ select {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: #fff;
+  background-color: #fff;
   color: var(--text);
-  padding: 0.75rem 0.9rem;
+  padding: 0.75rem 2.25rem 0.75rem 0.9rem;
   outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 0.9rem center;
+  background-size: 12px;
+  cursor: pointer;
 }
 
 select:focus {
