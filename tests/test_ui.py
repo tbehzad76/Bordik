@@ -76,6 +76,8 @@ def test_login_page_has_security_headers_and_csrf(client):
 
     assert response.status_code == 200
     assert "شماره همراه" in response.text
+    assert 'class="brand-mark"' in response.text
+    assert "M18 33l9 9 19-20" in response.text
     assert "csrf_token" in response.cookies
     assert "script-src 'self'" in response.headers["content-security-policy"]
     assert "font-src 'self'" in response.headers["content-security-policy"]
