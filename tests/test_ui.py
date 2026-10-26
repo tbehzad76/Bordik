@@ -186,7 +186,7 @@ def test_project_board_flow(client):
     assert board.status_code == 200
     assert "Company Board" in board.text
     assert board.text.count('class="board-column"') == 3
-    assert board.text.index("project-color-strip") < board.text.index("board-head")
+    assert "project-color-strip" not in board.text
 
     token = extract_csrf(board.text)
     column_id = int(re.search(r'data-column-id="(\d+)"', board.text).group(1))

@@ -1441,14 +1441,6 @@ select:focus {
   outline-offset: 2px;
 }
 
-.project-color-strip {
-  display: block;
-  height: 6px;
-  border-radius: 999px;
-  margin-bottom: 0.6rem;
-  background: var(--project-color, var(--primary));
-}
-
 .project-dot {
   display: inline-block;
   width: 10px;
