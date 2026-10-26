@@ -1255,6 +1255,26 @@ select:focus {
   margin-top: 0.25rem;
 }
 
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-body h2 {
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.settings-form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.danger-form {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
 .progress {
   width: 100%;
   height: 10px;

@@ -560,6 +560,8 @@ def test_owner_can_delete_project_via_ui(client):
     board = client.get(f"/projects/{project_id}")
     assert f"/projects/{project_id}/delete" in board.text
     assert "data-confirm" in board.text
+    assert 'id="project-settings-modal"' in board.text
+    assert "data-open-project-settings" in board.text
 
     token = extract_csrf(board.text)
     response = client.post(

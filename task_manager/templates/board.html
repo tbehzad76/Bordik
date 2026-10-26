@@ -15,9 +15,17 @@
     {% endif %}
   </div>
   {% if is_owner %}
-  <details class="edit-panel head-edit">
-    <summary class="btn btn-ghost btn-small">تنظیمات پروژه</summary>
-    <form class="edit-form" method="post" action="/projects/{{ project.id }}/edit">
+  <button class="btn btn-ghost btn-small" type="button" data-open-project-settings>
+    تنظیمات پروژه
+  </button>
+  {% endif %}
+</section>
+
+{% if is_owner %}
+<dialog id="project-settings-modal" class="modal" aria-labelledby="project-settings-title">
+  <div class="modal-body">
+    <h2 id="project-settings-title">تنظیمات پروژه</h2>
+    <form class="settings-form" method="post" action="/projects/{{ project.id }}/edit">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="field">
         <label for="project-edit-name">نام پروژه</label>
@@ -41,15 +49,19 @@
           {% endfor %}
         </div>
       </fieldset>
-      <button class="btn btn-primary btn-small" type="submit">ذخیره</button>
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">ذخیره تغییرات</button>
+        <button class="btn btn-ghost" type="button" data-close-project-settings>انصراف</button>
+      </div>
     </form>
-    <form method="post" action="/projects/{{ project.id }}/delete"
+    <form class="danger-form" method="post" action="/projects/{{ project.id }}/delete"
           data-confirm="آیا از حذف این پروژه و همهٔ وظایفش مطمئنی؟">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <button class="btn btn-danger btn-small" type="submit">حذف پروژه</button>
+      <button class="btn btn-danger btn-block" type="submit">حذف پروژه</button>
     </form>
-  </details>
-  {% endif %}
+  </div>
+</dialog>
+{% endif %}
 </section>
 
 <div class="board-progress">

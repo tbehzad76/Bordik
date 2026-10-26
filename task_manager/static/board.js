@@ -129,4 +129,37 @@
       }
     });
   }
+
+  const settingsModal = document.getElementById("project-settings-modal");
+  if (settingsModal) {
+    function openSettingsModal() {
+      if (typeof settingsModal.showModal === "function") {
+        settingsModal.showModal();
+      } else {
+        settingsModal.setAttribute("open", "open");
+      }
+    }
+
+    function closeSettingsModal() {
+      if (typeof settingsModal.close === "function") {
+        settingsModal.close();
+      } else {
+        settingsModal.removeAttribute("open");
+      }
+    }
+
+    document.querySelectorAll("[data-open-project-settings]").forEach((button) => {
+      button.addEventListener("click", openSettingsModal);
+    });
+
+    document.querySelectorAll("[data-close-project-settings]").forEach((button) => {
+      button.addEventListener("click", closeSettingsModal);
+    });
+
+    settingsModal.addEventListener("click", (event) => {
+      if (event.target === settingsModal) {
+        closeSettingsModal();
+      }
+    });
+  }
 })();
