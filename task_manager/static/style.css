@@ -847,6 +847,11 @@ textarea:focus {
   gap: 1.5rem;
   margin-bottom: 1.35rem;
   position: relative;
+  text-align: right;
+}
+
+.board-head-text {
+  min-width: 0;
 }
 
 .board-head h1 {
