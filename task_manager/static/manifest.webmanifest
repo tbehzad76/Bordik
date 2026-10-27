@@ -13,6 +13,13 @@
   "background_color": "#f4f6fb",
   "theme_color": "#2563eb",
   "categories": ["productivity", "business"],
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "/manifest.webmanifest",
+      "id": "/"
+    }
+  ],
   "icons": [
     {
       "src": "/static/icons/icon-192.png",

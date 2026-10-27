@@ -64,13 +64,6 @@
     </div>
   </header>
 
-  {% if user %}
-  <p class="install-hint container" id="install-hint" hidden>
-    در آیفون: دکمهٔ «اشتراک‌گذاری» را در Safari بزن و «افزودن به صفحهٔ اصلی» را انتخاب کن.
-    در اندروید: از منوی مرورگر «افزودن به صفحهٔ اصلی» / «نصب برنامه» را بزن.
-  </p>
-  {% endif %}
-
   <main class="container page">
     {% block content %}{% endblock %}
   </main>
@@ -78,6 +71,27 @@
   <footer class="site-footer">
     <div class="container">ساخته‌شده با FastAPI و PostgreSQL · {{ current_year }}</div>
   </footer>
+
+  {% if user %}
+  <dialog class="modal install-modal" id="install-modal" aria-labelledby="install-modal-title">
+    <div class="modal-body">
+      <div class="install-hero">
+        <img src="/static/icons/icon-192.png" alt="" width="56" height="56">
+        <div>
+          <h2 id="install-modal-title">بوردیک را روی گوشی نصب کن</h2>
+          <p class="muted install-lead">
+            با نصب، بوردیک تمام‌صفحه و مثل یک برنامهٔ واقعی باز می‌شود و آیکونش روی صفحهٔ اصلی می‌آید.
+          </p>
+        </div>
+      </div>
+      <ol class="install-steps" id="install-steps" hidden></ol>
+      <div class="form-actions install-actions">
+        <button class="btn btn-primary" type="button" id="install-now" hidden>نصب برنامه</button>
+        <button class="btn btn-ghost" type="button" id="install-dismiss">بعداً</button>
+      </div>
+    </div>
+  </dialog>
+  {% endif %}
 
   <script src="{{ url_for('static', path='/pwa.js') }}?v={{ asset_version }}" defer></script>
   <script src="{{ url_for('static', path='/notifications.js') }}?v={{ asset_version }}" defer></script>

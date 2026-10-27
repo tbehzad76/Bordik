@@ -686,7 +686,27 @@ def test_base_page_links_pwa(client):
     assert "apple-mobile-web-app-capable" in page
     assert "/static/icons/apple-touch-icon.png" in page
     assert 'id="install-app"' in page
+    assert 'id="install-modal"' in page
+    assert 'id="install-now"' in page
+    assert 'id="install-dismiss"' in page
+    assert 'id="install-steps"' in page
     assert "/static/pwa.js" in page
+
+
+def test_install_prompt_logic_is_mobile_aware(client):
+    script = client.get("/static/pwa.js").text
+    assert "beforeinstallprompt" in script
+    assert "appinstalled" in script
+    assert "getInstalledRelatedApps" in script
+    assert "display-mode: standalone" in script
+    assert "sessionStorage" in script
+    assert "showModal" in script
+
+
+def test_manifest_declares_related_application(client):
+    data = client.get("/manifest.webmanifest").json()
+    assert data["related_applications"][0]["platform"] == "webapp"
+    assert data["related_applications"][0]["id"] == data["id"]
 
 
 def test_static_assets_are_served(client):
