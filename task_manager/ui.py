@@ -85,7 +85,7 @@ DEFAULT_COLUMNS = (
     ("انجام‌شده", True),
 )
 
-ASSET_VERSION = "24"
+ASSET_VERSION = "25"
 
 FormPhone = Annotated[str, Form(min_length=1, max_length=30)]
 FormPassword = Annotated[str, Form(min_length=1, max_length=128)]

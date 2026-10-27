@@ -685,12 +685,26 @@ def test_base_page_links_pwa(client):
     assert 'name="theme-color" content="#2563eb"' in page
     assert "apple-mobile-web-app-capable" in page
     assert "/static/icons/apple-touch-icon.png" in page
-    assert 'id="install-app"' in page
     assert 'id="install-modal"' in page
     assert 'id="install-now"' in page
     assert 'id="install-dismiss"' in page
     assert 'id="install-steps"' in page
     assert "/static/pwa.js" in page
+    assert "maximum-scale=1" in page
+    assert "user-scalable=no" in page
+
+
+def test_header_has_mobile_menu(client):
+    register_via_ui(client)
+    page = client.get("/projects").text
+    assert 'id="menu-toggle"' in page
+    assert 'aria-controls="header-menu"' in page
+    assert 'id="header-menu"' in page
+    assert 'id="install-app"' not in page
+    assert "/static/header-menu.js" in page
+
+    script = client.get("/static/header-menu.js").text
+    assert "is-open" in script
 
 
 def test_install_prompt_logic_is_mobile_aware(client):

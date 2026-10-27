@@ -1,5 +1,4 @@
 (function () {
-  var installButton = document.getElementById('install-app');
   var modal = document.getElementById('install-modal');
   var installNow = document.getElementById('install-now');
   var dismissButton = document.getElementById('install-dismiss');
@@ -20,22 +19,31 @@
     window.matchMedia('(display-mode: fullscreen)').matches ||
     window.navigator.standalone === true;
   var deferredPrompt = null;
-  var installed = isStandalone || window.localStorage.getItem(INSTALLED_KEY) === '1';
+  var installed = isStandalone;
 
   if (isStandalone) {
     document.documentElement.classList.add('is-standalone');
   }
 
-  function markInstalled() {
-    installed = true;
+  try {
+    if (window.localStorage.getItem(INSTALLED_KEY) === '1') {
+      installed = true;
+    }
+  } catch (error) {
+    /* private mode */
+  }
+
+  function rememberInstalled() {
     try {
       window.localStorage.setItem(INSTALLED_KEY, '1');
     } catch (error) {
       /* private mode */
     }
-    if (installButton) {
-      installButton.hidden = true;
-    }
+  }
+
+  function markInstalled() {
+    installed = true;
+    rememberInstalled();
     closeModal();
   }
 
@@ -52,27 +60,45 @@
   }
 
   function renderIosSteps() {
+    if (!stepsList) {
+      return;
+    }
     stepsList.hidden = false;
     stepsList.textContent = '';
     stepsList.appendChild(step('در Safari دکمهٔ «اشتراک‌گذاری» (مربع با فلش رو به بالا) را بزن.'));
-    stepsList.appendChild(step('در فهرست باز شده، «Add to Home Screen» / «افزودن به صفحهٔ اصلی» را انتخاب کن.'));
+    stepsList.appendChild(
+      step('در فهرست باز شده، «Add to Home Screen» / «افزودن به صفحهٔ اصلی» را انتخاب کن.')
+    );
     stepsList.appendChild(step('روی «Add» بزن؛ آیکون بوردیک روی صفحهٔ اصلی می‌آید.'));
   }
 
   function renderBrowserSteps() {
+    if (!stepsList) {
+      return;
+    }
     stepsList.hidden = false;
     stepsList.textContent = '';
     stepsList.appendChild(step('منوی مرورگر را باز کن (سه نقطه در کروم یا سه خط در فایرفاکس).'));
-    stepsList.appendChild(step('گزینهٔ «نصب برنامه» / «Install app» یا «افزودن به صفحهٔ اصلی» را بزن.'));
+    stepsList.appendChild(
+      step('گزینهٔ «نصب برنامه» / «Install app» یا «افزودن به صفحهٔ اصلی» را بزن.')
+    );
     stepsList.appendChild(step('تأیید کن؛ آیکون بوردیک روی صفحهٔ اصلی می‌آید.'));
+  }
+
+  function showSteps() {
+    if (isIos || isSafari) {
+      renderIosSteps();
+    } else {
+      renderBrowserSteps();
+    }
+    if (installNow) {
+      installNow.hidden = true;
+    }
   }
 
   function showModal() {
     if (!modal || installed || modal.open) {
       return;
-    }
-    if (installButton) {
-      installButton.hidden = true;
     }
     if (stepsList) {
       stepsList.hidden = true;
@@ -81,11 +107,8 @@
     if (installNow) {
       installNow.hidden = !deferredPrompt;
     }
-    if (isIos || isSafari) {
-      renderIosSteps();
-      if (installNow) {
-        installNow.hidden = true;
-      }
+    if (!deferredPrompt) {
+      showSteps();
     }
     if (modal.showModal) {
       modal.showModal();
@@ -134,6 +157,25 @@
     return Promise.resolve(false);
   }
 
+  function triggerNativePrompt() {
+    if (!deferredPrompt) {
+      showSteps();
+      return;
+    }
+    var prompt = deferredPrompt;
+    deferredPrompt = null;
+    if (installNow) {
+      installNow.hidden = true;
+    }
+    prompt.prompt();
+    prompt.userChoice.then(function (choice) {
+      if (choice && choice.outcome === 'accepted') {
+        rememberInstalled();
+      }
+      closeModal();
+    });
+  }
+
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
       navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
@@ -143,28 +185,18 @@
   window.addEventListener('beforeinstallprompt', function (event) {
     event.preventDefault();
     deferredPrompt = event;
-    if (installed) {
-      return;
+    installed = false;
+    try {
+      window.localStorage.removeItem(INSTALLED_KEY);
+    } catch (error) {
+      /* private mode */
     }
-    if (installButton) {
-      installButton.hidden = false;
-    }
-    if (modal && !modal.open && isTouchPhone) {
+    if (modal && !modal.open && isTouchPhone && !isDismissed()) {
       showModal();
     }
   });
 
   window.addEventListener('appinstalled', markInstalled);
-
-  if (installButton) {
-    installButton.addEventListener('click', function () {
-      if (deferredPrompt) {
-        triggerNativePrompt();
-        return;
-      }
-      showModal();
-    });
-  }
 
   if (installNow) {
     installNow.addEventListener('click', triggerNativePrompt);
@@ -191,26 +223,6 @@
     });
   }
 
-  function triggerNativePrompt() {
-    if (!deferredPrompt) {
-      if (isIos) {
-        renderIosSteps();
-      } else {
-        renderBrowserSteps();
-      }
-      return;
-    }
-    var prompt = deferredPrompt;
-    deferredPrompt = null;
-    if (installNow) {
-      installNow.hidden = true;
-    }
-    prompt.prompt();
-    prompt.userChoice.then(function () {
-      closeModal();
-    });
-  }
-
   checkInstalled().then(function (alreadyInstalled) {
     if (alreadyInstalled) {
       markInstalled();
@@ -223,12 +235,6 @@
       } catch (error) {
         /* private mode */
       }
-    }
-    if (installed) {
-      return;
-    }
-    if (installButton) {
-      installButton.hidden = false;
     }
     schedulePopup();
   });

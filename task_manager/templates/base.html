@@ -2,7 +2,7 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#2563eb">
   <meta name="mobile-web-app-capable" content="yes">
@@ -30,35 +30,38 @@
         <span>بوردیک</span>
       </a>
       {% if user %}
-      <nav class="header-nav">
-        <a class="nav-link" href="/projects">پروژه‌ها</a>
-        <a class="nav-link" href="/my-tasks">وظایف من</a>
-      </nav>
-      <div class="user-area">
-        <button class="btn btn-ghost btn-small install-app" type="button" id="install-app" hidden>
-          نصب روی صفحه اصلی
-        </button>
-        <span class="notif" id="notif"
-              data-feed-url="/ui/notifications/feed"
-              data-read-url="/ui/notifications/read"
-              data-csrf="{{ csrf_token }}">
-          <button class="icon-btn notif-bell" type="button" id="notif-bell" title="اعلان‌ها">
-            اعلان‌ها<span class="notif-count" id="notif-count" hidden></span>
-          </button>
-          <div class="notif-panel" id="notif-panel" hidden>
-            <div class="notif-head">اعلان‌ها</div>
-            <ul class="notif-list" id="notif-list"></ul>
-            <p class="notif-hint" id="notif-hint" hidden></p>
-            <button class="btn btn-ghost btn-small notif-enable" type="button" id="notif-enable" hidden>
-              فعال‌سازی اعلان مرورگر
+      <button class="icon-btn menu-toggle" type="button" id="menu-toggle"
+              aria-expanded="false" aria-controls="header-menu" title="منو">
+        منو
+      </button>
+      <div class="header-menu" id="header-menu">
+        <nav class="header-nav">
+          <a class="nav-link" href="/projects">پروژه‌ها</a>
+          <a class="nav-link" href="/my-tasks">وظایف من</a>
+        </nav>
+        <div class="user-area">
+          <span class="notif" id="notif"
+                data-feed-url="/ui/notifications/feed"
+                data-read-url="/ui/notifications/read"
+                data-csrf="{{ csrf_token }}">
+            <button class="icon-btn notif-bell" type="button" id="notif-bell" title="اعلان‌ها">
+              اعلان‌ها<span class="notif-count" id="notif-count" hidden></span>
             </button>
-          </div>
-        </span>
-        <span class="user-email" title="{{ user.full_name }}">{{ user.full_name }}</span>
-        <form method="post" action="/logout">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <button class="btn btn-ghost btn-small" type="submit">خروج</button>
-        </form>
+            <div class="notif-panel" id="notif-panel" hidden>
+              <div class="notif-head">اعلان‌ها</div>
+              <ul class="notif-list" id="notif-list"></ul>
+              <p class="notif-hint" id="notif-hint" hidden></p>
+              <button class="btn btn-ghost btn-small notif-enable" type="button" id="notif-enable" hidden>
+                فعال‌سازی اعلان مرورگر
+              </button>
+            </div>
+          </span>
+          <span class="user-email" title="{{ user.full_name }}">{{ user.full_name }}</span>
+          <form method="post" action="/logout">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-ghost btn-small" type="submit">خروج</button>
+          </form>
+        </div>
       </div>
       {% endif %}
     </div>
@@ -94,6 +97,7 @@
   {% endif %}
 
   <script src="{{ url_for('static', path='/pwa.js') }}?v={{ asset_version }}" defer></script>
+  <script src="{{ url_for('static', path='/header-menu.js') }}?v={{ asset_version }}" defer></script>
   <script src="{{ url_for('static', path='/notifications.js') }}?v={{ asset_version }}" defer></script>
   <script src="{{ url_for('static', path='/confirm-submit.js') }}?v={{ asset_version }}" defer></script>
   {% block scripts %}{% endblock %}
