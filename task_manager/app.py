@@ -2,7 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import inspect, text
 
@@ -118,5 +118,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/health", tags=["health"])
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/manifest.webmanifest", include_in_schema=False)
+    def manifest() -> Response:
+        content = (STATIC_DIR / "manifest.webmanifest").read_text(encoding="utf-8")
+        return Response(
+            content=content,
+            media_type="application/manifest+json",
+            headers={"Cache-Control": "no-cache"},
+        )
+
+    @app.get("/sw.js", include_in_schema=False)
+    def service_worker() -> Response:
+        content = (STATIC_DIR / "sw.js").read_text(encoding="utf-8")
+        return Response(
+            content=content,
+            media_type="application/javascript",
+            headers={
+                "Cache-Control": "no-cache",
+                "Service-Worker-Allowed": "/",
+            },
+        )
 
     return app

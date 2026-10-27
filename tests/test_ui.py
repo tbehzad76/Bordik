@@ -655,6 +655,40 @@ def test_done_column_hides_overdue(client):
     assert "انجام‌شده" in board.text
 
 
+def test_pwa_assets_are_served(client):
+    manifest = client.get("/manifest.webmanifest")
+    assert manifest.status_code == 200
+    assert "application/manifest+json" in manifest.headers["content-type"]
+    data = manifest.json()
+    assert data["start_url"] == "/"
+    assert data["scope"] == "/"
+    assert data["display"] == "standalone"
+    assert data["dir"] == "rtl"
+    assert {"192x192", "512x512"} <= {icon["sizes"] for icon in data["icons"]}
+    assert any(icon["purpose"] == "maskable" for icon in data["icons"])
+
+    worker = client.get("/sw.js")
+    assert worker.status_code == 200
+    assert worker.headers["service-worker-allowed"] == "/"
+    assert "javascript" in worker.headers["content-type"]
+    assert "addEventListener('fetch'" in worker.text
+
+    for icon in ("icon-192.png", "icon-512.png", "apple-touch-icon.png"):
+        assert client.get(f"/static/icons/{icon}").status_code == 200
+    assert client.get("/static/offline.html").status_code == 200
+
+
+def test_base_page_links_pwa(client):
+    register_via_ui(client)
+    page = client.get("/projects").text
+    assert 'rel="manifest" href="/manifest.webmanifest"' in page
+    assert 'name="theme-color" content="#2563eb"' in page
+    assert "apple-mobile-web-app-capable" in page
+    assert "/static/icons/apple-touch-icon.png" in page
+    assert 'id="install-app"' in page
+    assert "/static/pwa.js" in page
+
+
 def test_static_assets_are_served(client):
     css = client.get("/static/style.css")
     js = client.get("/static/board.js")
