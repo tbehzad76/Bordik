@@ -26,19 +26,47 @@ def verify_password(password: str, hashed_password: str) -> bool:
         return False
 
 
-def create_access_token(user_id: int, settings: Settings) -> str:
+def create_access_token(
+    user_id: int,
+    settings: Settings,
+    expires_minutes: int | None = None,
+) -> str:
+    lifetime = (
+        expires_minutes
+        if expires_minutes is not None
+        else settings.access_token_expire_minutes
+    )
     now = datetime.now(UTC)
     payload = {
         "sub": str(user_id),
         "type": "access",
         "iat": now,
-        "exp": now + timedelta(minutes=settings.access_token_expire_minutes),
+        "exp": now + timedelta(minutes=lifetime),
     }
     return jwt.encode(
         payload,
         settings.jwt_secret_key,
         algorithm=settings.jwt_algorithm,
     )
+
+
+def token_remaining_seconds(token: str, settings: Settings) -> float | None:
+    """Seconds until the token expires, without validating the signature age."""
+    try:
+        payload = jwt.decode(
+            token,
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm],
+            options={"verify_exp": False},
+        )
+        expires_at = payload.get("exp")
+        if expires_at is None:
+            return None
+        return (
+            datetime.fromtimestamp(float(expires_at), UTC) - datetime.now(UTC)
+        ).total_seconds()
+    except (JWTError, KeyError, TypeError, ValueError):
+        return None
 
 
 def decode_access_token(token: str, settings: Settings) -> int:
@@ -59,13 +87,20 @@ def decode_access_token(token: str, settings: Settings) -> int:
         raise InvalidAccessToken("invalid or expired token") from exc
 
 
-def create_csrf_token(settings: Settings) -> str:
+def create_csrf_token(
+    settings: Settings, expires_minutes: int | None = None
+) -> str:
+    lifetime = (
+        expires_minutes
+        if expires_minutes is not None
+        else settings.session_days * 24 * 60
+    )
     now = datetime.now(UTC)
     payload = {
         "type": "csrf",
         "nonce": secrets.token_urlsafe(32),
         "iat": now,
-        "exp": now + timedelta(hours=1),
+        "exp": now + timedelta(minutes=lifetime),
     }
     return jwt.encode(
         payload,

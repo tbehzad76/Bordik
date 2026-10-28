@@ -1229,6 +1229,17 @@ textarea:focus {
   width: auto;
 }
 
+.check-line input[type="checkbox"] {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--primary);
+  flex-shrink: 0;
+}
+
+.check-line span {
+  line-height: 1.6;
+}
+
 .card-detail {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;

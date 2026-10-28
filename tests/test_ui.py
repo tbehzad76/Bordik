@@ -1,6 +1,8 @@
 import re
 
-from tests.conftest import api_register
+import jwt
+
+from tests.conftest import TEST_SECRET, api_register
 
 DEFAULT_PHONE = "09120000001"
 DEFAULT_PASSWORD = "password123"
@@ -37,16 +39,26 @@ def register_via_ui(
     return response
 
 
-def login_via_ui(client, phone=DEFAULT_PHONE, password=DEFAULT_PASSWORD):
+def login_via_ui(
+    client, phone=DEFAULT_PHONE, password=DEFAULT_PASSWORD, remember="1"
+):
     page = client.get("/login")
     token = extract_csrf(page.text)
-    response = client.post(
-        "/login",
-        data={"phone": phone, "password": password, "csrf_token": token},
-        follow_redirects=False,
-    )
+    data = {"phone": phone, "password": password, "csrf_token": token}
+    if remember:
+        data["remember"] = remember
+    response = client.post("/login", data=data, follow_redirects=False)
     assert response.status_code == 303, response.text
     return response
+
+
+def auth_set_cookie(response, name="access_token"):
+    header = next(
+        value
+        for value in response.headers.get_list("set-cookie")
+        if value.startswith(f"{name}=")
+    )
+    return header, header.split("=", 1)[1].split(";")[0]
 
 
 def create_project_via_ui(client, name="UI Project", description="Board"):
@@ -653,6 +665,71 @@ def test_done_column_hides_overdue(client):
     board = client.get(f"/projects/{project_id}")
     assert "روز تأخیر" not in board.text
     assert "انجام‌شده" in board.text
+
+
+def test_login_keeps_the_phone_signed_in(client):
+    register_via_ui(client)
+    client.cookies.clear()
+    response = login_via_ui(client)
+
+    header, value = auth_set_cookie(response)
+    max_age = int(re.search(r"Max-Age=(\d+)", header).group(1))
+    assert max_age >= 29 * 86400
+
+    payload = jwt.decode(
+        value,
+        TEST_SECRET,
+        algorithms=["HS256"],
+        options={"verify_exp": False},
+    )
+    assert payload["exp"] - payload["iat"] >= 29 * 86400
+
+    page = client.get("/projects")
+    assert page.status_code == 200
+    assert "UI User" in page.text
+
+
+def test_login_without_remember_uses_a_session_cookie(client):
+    register_via_ui(client)
+    client.cookies.clear()
+    response = login_via_ui(client, remember=None)
+
+    header, value = auth_set_cookie(response)
+    assert "Max-Age" not in header
+    payload = jwt.decode(
+        value,
+        TEST_SECRET,
+        algorithms=["HS256"],
+        options={"verify_exp": False},
+    )
+    assert payload["exp"] - payload["iat"] <= 3600
+
+
+def test_short_session_is_refreshed_on_page_render(client):
+    from task_manager.security import create_access_token
+
+    response = api_register(client)
+    assert response.status_code == 201
+    user_id = response.json()["id"]
+    settings = client.app.state.settings
+
+    client.cookies.set(
+        "access_token",
+        create_access_token(user_id, settings, expires_minutes=5),
+    )
+    page = client.get("/projects")
+    assert page.status_code == 200
+
+    header, value = auth_set_cookie(page)
+    max_age = int(re.search(r"Max-Age=(\d+)", header).group(1))
+    assert max_age >= 29 * 86400
+    payload = jwt.decode(
+        value,
+        TEST_SECRET,
+        algorithms=["HS256"],
+        options={"verify_exp": False},
+    )
+    assert payload["exp"] - payload["iat"] >= 29 * 86400
 
 
 def test_pwa_assets_are_served(client):

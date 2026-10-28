@@ -62,6 +62,7 @@ from .security import (
     create_csrf_token,
     hash_password,
     is_valid_csrf_token,
+    token_remaining_seconds,
 )
 from .services import accept_pending_invitations, authenticate_user
 
@@ -85,7 +86,7 @@ DEFAULT_COLUMNS = (
     ("انجام‌شده", True),
 )
 
-ASSET_VERSION = "27"
+ASSET_VERSION = "28"
 
 FormPhone = Annotated[str, Form(min_length=1, max_length=30)]
 FormPassword = Annotated[str, Form(min_length=1, max_length=128)]
@@ -146,16 +147,49 @@ CsrfProtected = Annotated[None, Depends(require_csrf)]
 CsrfHeaderProtected = Annotated[None, Depends(require_csrf_header)]
 
 
-def _set_auth_cookie(response: Response, user_id: int, settings: Settings) -> None:
+def _auth_cookie_lifetime_minutes(settings: Settings, remember: bool) -> int:
+    if remember:
+        return settings.session_days * 24 * 60
+    return settings.access_token_expire_minutes
+
+
+def _set_auth_cookie(
+    response: Response,
+    user_id: int,
+    settings: Settings,
+    remember: bool = True,
+) -> None:
+    lifetime_minutes = _auth_cookie_lifetime_minutes(settings, remember)
     response.set_cookie(
         key=AUTH_COOKIE_NAME,
-        value=create_access_token(user_id, settings),
-        max_age=settings.access_token_expire_minutes * 60,
+        value=create_access_token(
+            user_id, settings, expires_minutes=lifetime_minutes
+        ),
+        max_age=lifetime_minutes * 60 if remember else None,
         httponly=True,
         samesite="lax",
         secure=settings.cookie_secure,
         path="/",
     )
+
+
+def _refresh_auth_cookie(
+    request: Request,
+    response: Response,
+    user: User | None,
+    settings: Settings,
+) -> None:
+    """Slide the session forward so a phone stays signed in without re-login."""
+    if user is None:
+        return
+    token = request.cookies.get(AUTH_COOKIE_NAME)
+    if not token:
+        return
+    remaining = token_remaining_seconds(token, settings)
+    if remaining is None:
+        return
+    if remaining <= settings.session_days * 86400 / 2:
+        _set_auth_cookie(response, user.id, settings)
 
 
 def _redirect(path: str) -> RedirectResponse:
@@ -199,12 +233,13 @@ def _render_page(
         response.set_cookie(
             key=CSRF_COOKIE_NAME,
             value=csrf_token,
-            max_age=3600,
+            max_age=settings.session_days * 86400,
             httponly=True,
             samesite="lax",
             secure=settings.cookie_secure,
             path="/",
         )
+    _refresh_auth_cookie(request, response, user, settings)
     return response
 
 
@@ -265,6 +300,7 @@ def login_submit(
     phone: FormPhone,
     password: FormPassword,
     _csrf: CsrfProtected,
+    remember: Annotated[str | None, Form()] = None,
 ) -> Response:
     user = authenticate_user(db, phone, password)
     if user is None:
@@ -277,7 +313,7 @@ def login_submit(
         )
 
     response = _redirect("/projects")
-    _set_auth_cookie(response, user.id, settings)
+    _set_auth_cookie(response, user.id, settings, remember=bool(remember))
     return response
 
 

@@ -19,7 +19,8 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./tasks.db"
     jwt_secret_key: str = Field(min_length=32)
     jwt_algorithm: Literal["HS256"] = "HS256"
-    access_token_expire_minutes: int = Field(default=30, ge=5, le=1440)
+    access_token_expire_minutes: int = Field(default=30, ge=5, le=525600)
+    session_days: int = Field(default=30, ge=1, le=365)
     cookie_secure: bool = False
     auto_create_tables: bool = True
 
