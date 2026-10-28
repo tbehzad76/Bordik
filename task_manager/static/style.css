@@ -772,8 +772,14 @@ textarea:focus {
   min-width: 0;
 }
 
-.menu-toggle {
+.icon-btn.menu-toggle {
   display: none;
+}
+
+.menu-toggle svg {
+  width: 20px;
+  height: 20px;
+  display: block;
 }
 
 .header-nav {
@@ -1886,13 +1892,12 @@ form.has-error .assignee-field {
     gap: 0.5rem;
   }
 
-  .menu-toggle {
+  .icon-btn.menu-toggle {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     margin-inline-start: auto;
-    padding-inline: 0.75rem;
-    font-size: 0.85rem;
-    font-weight: 700;
+    padding-inline: 0.6rem;
   }
 
   .header-menu {

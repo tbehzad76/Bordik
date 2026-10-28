@@ -699,12 +699,17 @@ def test_header_has_mobile_menu(client):
     page = client.get("/projects").text
     assert 'id="menu-toggle"' in page
     assert 'aria-controls="header-menu"' in page
+    assert 'aria-label="منو"' in page
+    assert 'class="icon-btn menu-toggle"' in page
     assert 'id="header-menu"' in page
     assert 'id="install-app"' not in page
     assert "/static/header-menu.js" in page
 
     script = client.get("/static/header-menu.js").text
     assert "is-open" in script
+
+    stylesheet = client.get("/static/style.css").text
+    assert ".icon-btn.menu-toggle" in stylesheet
 
 
 def test_install_prompt_logic_is_mobile_aware(client):

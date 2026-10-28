@@ -31,8 +31,11 @@
       </a>
       {% if user %}
       <button class="icon-btn menu-toggle" type="button" id="menu-toggle"
-              aria-expanded="false" aria-controls="header-menu" title="منو">
-        منو
+              aria-expanded="false" aria-controls="header-menu" aria-label="منو" title="منو">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" />
+        </svg>
       </button>
       <div class="header-menu" id="header-menu">
         <nav class="header-nav">
