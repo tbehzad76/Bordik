@@ -852,6 +852,12 @@ def test_lan_access_helpers_exist():
     assert "New-NetFirewallRule" in script
     assert "/diag" in script
 
+    checker = (root / "tools" / "lan-check.ps1").read_text(encoding="utf-8")
+    assert "/health" in checker
+    assert "New-NetFirewallRule" in checker
+    assert "hairpin" in checker
+    assert "0.0.0.0" in checker
+
 
 def test_pwa_assets_are_served(client):
     manifest = client.get("/manifest.webmanifest")
