@@ -1,0 +1,9 @@
+# Publish the app on your local network so a phone can open it.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.lan.yml up -d --build
+#
+# Then open http://<server-lan-ip>:8000 on the phone (see README "عیب‌یابی روی گوشی").
+services:
+  app:
+    ports:
+      - "${APP_PORT:-8000}:8000"

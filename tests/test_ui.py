@@ -830,6 +830,29 @@ def test_health_still_works(client):
     assert client.get("/health").json() == {"status": "ok"}
 
 
+def test_service_worker_never_shows_a_blank_window(client):
+    worker = client.get("/sw.js").text
+    assert "bordik-static-v3" in worker
+    assert "FALLBACK_HTML" in worker
+    assert "cache.add(OFFLINE_URL)" in worker
+    assert "503" in worker
+
+
+def test_lan_access_helpers_exist():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    override = (root / "docker-compose.lan.yml").read_text(encoding="utf-8")
+    assert ":8000" in override
+    assert "APP_PORT" in override
+    assert "app:" in override
+
+    script = (root / "tools" / "lan-serve.ps1").read_text(encoding="utf-8")
+    assert "--host 0.0.0.0" in script
+    assert "New-NetFirewallRule" in script
+    assert "/diag" in script
+
+
 def test_pwa_assets_are_served(client):
     manifest = client.get("/manifest.webmanifest")
     assert manifest.status_code == 200

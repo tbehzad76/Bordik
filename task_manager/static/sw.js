@@ -1,5 +1,14 @@
-const CACHE_NAME = 'bordik-static-v2';
+const CACHE_NAME = 'bordik-static-v3';
 const OFFLINE_URL = '/static/offline.html';
+const FALLBACK_HTML =
+  '<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="utf-8">' +
+  '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+  '<title>اتصال برقرار نشد</title></head>' +
+  '<body style="font-family:Tahoma,sans-serif;padding:2rem;line-height:2">' +
+  '<h2>اتصال برقرار نشد</h2>' +
+  '<p>سایت در دسترس نیست. اینترنت و آدرس سرور را بررسی کن و دوباره تلاش کن.</p>' +
+  '<button onclick="location.reload()" style="padding:.6rem 1.2rem;font:inherit">تلاش دوباره</button>' +
+  '</body></html>';
 const PRECACHE_URLS = [
   OFFLINE_URL,
   '/static/manifest.webmanifest',
@@ -21,12 +30,21 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
-      )
-      .then(() => self.clients.claim())
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter((key) => key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
+      );
+      const cache = await caches.open(CACHE_NAME);
+      try {
+        await cache.add(OFFLINE_URL);
+      } catch (error) {
+        /* the offline page stays available from the previous install */
+      }
+      await self.clients.claim();
+    })()
   );
 });
 
@@ -58,11 +76,16 @@ async function networkFirst(request) {
     return await fetch(request);
   } catch (error) {
     const cache = await caches.open(CACHE_NAME);
-    const offline = await cache.match(OFFLINE_URL);
+    const offline =
+      (await cache.match(OFFLINE_URL)) ||
+      (await caches.match(OFFLINE_URL));
     if (offline) {
       return offline;
     }
-    throw error;
+    return new Response(FALLBACK_HTML, {
+      status: 503,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    });
   }
 }
 
