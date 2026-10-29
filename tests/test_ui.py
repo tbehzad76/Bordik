@@ -810,6 +810,26 @@ def test_short_session_is_refreshed_on_page_render(client):
     assert payload["exp"] - payload["iat"] >= 29 * 86400
 
 
+def test_diag_endpoint_helps_mobile_debugging(client):
+    response = client.get("/diag")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["scheme"] == "http"
+    assert data["secure_cookie_on_this_scheme"] is False
+    assert data["session_days"] == 30
+    assert data["database"] == "ok"
+    assert "cookie_names" in data
+    assert TEST_SECRET not in response.text
+
+    https = client.get("/diag", headers={"X-Forwarded-Proto": "https"})
+    assert https.json()["secure_cookie_on_this_scheme"] is True
+
+
+def test_health_still_works(client):
+    assert client.get("/health").json() == {"status": "ok"}
+
+
 def test_pwa_assets_are_served(client):
     manifest = client.get("/manifest.webmanifest")
     assert manifest.status_code == 200

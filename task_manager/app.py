@@ -1,8 +1,11 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager, suppress
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import inspect, text
 
@@ -13,6 +16,14 @@ from .routers import auth, projects, tasks
 from .rubika import run_polling
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+access_logger = logging.getLogger("bordik.access")
+if not access_logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
+    access_logger.addHandler(handler)
+    access_logger.setLevel(logging.INFO)
+    access_logger.propagate = False
 
 
 def _prepare_schema(engine, settings: Settings) -> None:
@@ -108,6 +119,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(ui.router)
 
     @app.middleware("http")
+    async def access_log(request: Request, call_next):
+        response = await call_next(request)
+        path = request.url.path
+        if not path.startswith("/static") and path != "/health":
+            access_logger.info(
+                '%s %s -> %s scheme=%s host=%s ua="%s"',
+                request.method,
+                path,
+                response.status_code,
+                request.url.scheme,
+                request.headers.get("host", "-"),
+                (request.headers.get("user-agent") or "-")[:90],
+            )
+        return response
+
+    @app.middleware("http")
     async def security_headers(request: Request, call_next):
         response = await call_next(request)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
@@ -124,6 +151,35 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/health", tags=["health"])
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/diag", include_in_schema=False)
+    def diag(request: Request) -> Response:
+        """Open this from the phone to see how the request arrived."""
+        settings: Settings = request.app.state.settings
+        database = "ok"
+        try:
+            with engine.connect() as connection:
+                connection.execute(text("SELECT 1"))
+        except Exception as error:  # pragma: no cover - diagnostic only
+            database = f"error: {type(error).__name__}"
+
+        payload = {
+            "status": "ok",
+            "time_utc": datetime.now(UTC).isoformat(timespec="seconds"),
+            "app": settings.app_name,
+            "asset_version": ui.ASSET_VERSION,
+            "scheme": request.url.scheme,
+            "host": request.headers.get("host", "-"),
+            "forwarded_proto": request.headers.get("x-forwarded-proto", "-"),
+            "forwarded_for": request.headers.get("x-forwarded-for", "-"),
+            "cookie_names": sorted(request.cookies.keys()),
+            "secure_cookie_on_this_scheme": ui._cookie_secure(request),
+            "session_days": settings.session_days,
+            "cookie_secure_setting": settings.cookie_secure,
+            "database": database,
+            "user_agent": request.headers.get("user-agent", "-"),
+        }
+        return JSONResponse(payload)
 
     @app.get("/manifest.webmanifest", include_in_schema=False)
     def manifest() -> Response:
