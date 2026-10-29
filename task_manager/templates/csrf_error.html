@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}نشست منقضی شد | بوردیک{% endblock %}
+{% block content %}
+<section class="card offline-card">
+  <h1>درخواست تو معتبر نبود</h1>
+  <p class="muted">
+    مرورگر کوکی امنیتی این صفحه را نداشت یا منقضی شده بود. یک‌بار صفحه را رفرش کن و دوباره تلاش کن.
+    اگر همیشه این پیام را می‌بینی، احتمالاً سایت را بدون <strong>HTTPS</strong> باز کرده‌ای
+    (مثلاً با آدرس IP) و مرورگر کوکی‌ها را نگه نمی‌دارد؛ یا کوکی‌های سایت را در مرورگر بلاک کرده‌ای.
+  </p>
+  <div class="form-actions install-actions">
+    <a class="btn btn-primary" href="{{ retry_path }}">دوباره تلاش کن</a>
+    <a class="btn btn-ghost" href="/projects">پروژه‌ها</a>
+  </div>
+</section>
+{% endblock %}

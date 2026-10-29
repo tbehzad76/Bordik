@@ -86,7 +86,7 @@ DEFAULT_COLUMNS = (
     ("انجام‌شده", True),
 )
 
-ASSET_VERSION = "28"
+ASSET_VERSION = "29"
 
 FormPhone = Annotated[str, Form(min_length=1, max_length=30)]
 FormPassword = Annotated[str, Form(min_length=1, max_length=128)]
@@ -108,6 +108,14 @@ def _parse_due_date(value: str | None) -> date | None:
         return None
 
 
+class CsrfError(Exception):
+    """Raised when a browser form post has no usable CSRF token."""
+
+    def __init__(self, path: str) -> None:
+        self.path = path
+        super().__init__("invalid csrf token")
+
+
 def _valid_csrf(request: Request, settings: Settings, supplied: str | None) -> bool:
     cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
     if (
@@ -125,6 +133,15 @@ def require_csrf(
     csrf_token: CsrfToken,
 ) -> None:
     if not _valid_csrf(request, settings, csrf_token):
+        raise CsrfError(request.url.path)
+
+
+def require_csrf_header(
+    request: Request,
+    settings: AppSettings,
+    x_csrf_token: Annotated[str | None, Header(alias="X-CSRF-Token")] = None,
+) -> None:
+    if not _valid_csrf(request, settings, x_csrf_token):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid CSRF token",
@@ -147,6 +164,20 @@ CsrfProtected = Annotated[None, Depends(require_csrf)]
 CsrfHeaderProtected = Annotated[None, Depends(require_csrf_header)]
 
 
+def _request_is_https(request: Request) -> bool:
+    if request.url.scheme == "https":
+        return True
+    forwarded = request.headers.get("x-forwarded-proto")
+    if forwarded:
+        return forwarded.split(",")[0].strip().lower() == "https"
+    return "proto=https" in request.headers.get("forwarded", "").lower()
+
+
+def _cookie_secure(request: Request) -> bool:
+    """Flag cookies Secure only on HTTPS; browsers drop Secure cookies on HTTP."""
+    return _request_is_https(request)
+
+
 def _auth_cookie_lifetime_minutes(settings: Settings, remember: bool) -> int:
     if remember:
         return settings.session_days * 24 * 60
@@ -154,6 +185,7 @@ def _auth_cookie_lifetime_minutes(settings: Settings, remember: bool) -> int:
 
 
 def _set_auth_cookie(
+    request: Request,
     response: Response,
     user_id: int,
     settings: Settings,
@@ -168,7 +200,7 @@ def _set_auth_cookie(
         max_age=lifetime_minutes * 60 if remember else None,
         httponly=True,
         samesite="lax",
-        secure=settings.cookie_secure,
+        secure=_cookie_secure(request),
         path="/",
     )
 
@@ -189,7 +221,20 @@ def _refresh_auth_cookie(
     if remaining is None:
         return
     if remaining <= settings.session_days * 86400 / 2:
-        _set_auth_cookie(response, user.id, settings)
+        _set_auth_cookie(request, response, user.id, settings)
+
+
+def csrf_error_response(
+    request: Request, settings: Settings, error: CsrfError
+) -> Response:
+    response = _render_page(
+        request,
+        "csrf_error.html",
+        settings,
+        retry_path=error.path or "/login",
+    )
+    response.status_code = status.HTTP_403_FORBIDDEN
+    return response
 
 
 def _redirect(path: str) -> RedirectResponse:
@@ -236,7 +281,7 @@ def _render_page(
             max_age=settings.session_days * 86400,
             httponly=True,
             samesite="lax",
-            secure=settings.cookie_secure,
+            secure=_cookie_secure(request),
             path="/",
         )
     _refresh_auth_cookie(request, response, user, settings)
@@ -313,7 +358,7 @@ def login_submit(
         )
 
     response = _redirect("/projects")
-    _set_auth_cookie(response, user.id, settings, remember=bool(remember))
+    _set_auth_cookie(request, response, user.id, settings, remember=bool(remember))
     return response
 
 
@@ -400,7 +445,7 @@ def register_submit(
     accept_pending_invitations(db, user)
 
     response = _redirect("/projects")
-    _set_auth_cookie(response, user.id, settings)
+    _set_auth_cookie(request, response, user.id, settings)
     return response
 
 
@@ -559,21 +604,22 @@ async def notifications_read(
 
 
 @router.post("/logout")
-def logout(settings: AppSettings, _csrf: CsrfProtected) -> Response:
+def logout(request: Request, settings: AppSettings, _csrf: CsrfProtected) -> Response:
+    secure = _cookie_secure(request)
     response = _redirect("/login")
     response.delete_cookie(
         AUTH_COOKIE_NAME,
         path="/",
         httponly=True,
         samesite="lax",
-        secure=settings.cookie_secure,
+        secure=secure,
     )
     response.delete_cookie(
         CSRF_COOKIE_NAME,
         path="/",
         httponly=True,
         samesite="lax",
-        secure=settings.cookie_secure,
+        secure=secure,
     )
     return response
 

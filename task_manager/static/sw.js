@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bordik-static-v1';
+const CACHE_NAME = 'bordik-static-v2';
 const OFFLINE_URL = '/static/offline.html';
 const PRECACHE_URLS = [
   OFFLINE_URL,

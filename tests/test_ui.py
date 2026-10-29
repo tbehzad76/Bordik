@@ -188,6 +188,84 @@ def test_csrf_token_is_required(client):
         },
     )
     assert rejected.status_code == 403
+    assert "درخواست تو معتبر نبود" in rejected.text
+
+
+def test_https_scheme_decides_the_secure_flag(client):
+    response = api_register(client)
+    assert response.status_code == 201
+
+    page = client.get("/login")
+    token = extract_csrf(page.text)
+
+    over_http = client.post(
+        "/login",
+        data={
+            "phone": DEFAULT_PHONE,
+            "password": DEFAULT_PASSWORD,
+            "remember": "1",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert over_http.status_code == 303
+    header, _ = auth_set_cookie(over_http)
+    assert "Secure" not in header
+
+    client.cookies.clear()
+    forwarded = client.post(
+        "/login",
+        data={
+            "phone": DEFAULT_PHONE,
+            "password": DEFAULT_PASSWORD,
+            "remember": "1",
+            "csrf_token": extract_csrf(client.get("/login").text),
+        },
+        headers={"X-Forwarded-Proto": "https"},
+        follow_redirects=False,
+    )
+    assert forwarded.status_code == 303
+    header, _ = auth_set_cookie(forwarded)
+    assert "Secure" in header
+
+
+def test_login_works_over_plain_http_even_when_cookie_secure_is_true(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from task_manager.app import create_app
+    from task_manager.config import Settings
+
+    settings = Settings(
+        database_url=f"sqlite:///{tmp_path / 'lan.db'}",
+        jwt_secret_key=TEST_SECRET,
+        access_token_expire_minutes=5,
+        cookie_secure=True,
+    )
+    app = create_app(settings)
+    with TestClient(app, base_url="http://192.168.1.50:8000") as lan_client:
+        response = lan_client.post(
+            "/api/auth/register",
+            json={
+                "full_name": "LAN User",
+                "phone": DEFAULT_PHONE,
+                "password": DEFAULT_PASSWORD,
+            },
+        )
+        assert response.status_code == 201
+        page = lan_client.get("/login")
+        token = extract_csrf(page.text)
+        login = lan_client.post(
+            "/login",
+            data={
+                "phone": DEFAULT_PHONE,
+                "password": DEFAULT_PASSWORD,
+                "remember": "1",
+                "csrf_token": token,
+            },
+            follow_redirects=False,
+        )
+        assert login.status_code == 303
+        assert lan_client.get("/projects").status_code == 200
 
 
 def test_project_board_flow(client):

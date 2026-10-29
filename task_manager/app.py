@@ -115,6 +115,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response.headers.setdefault("Referrer-Policy", "same-origin")
         return response
 
+    @app.exception_handler(ui.CsrfError)
+    async def csrf_error_handler(request: Request, exc: ui.CsrfError) -> Response:
+        return ui.csrf_error_response(
+            request, request.app.state.settings, exc
+        )
+
     @app.get("/health", tags=["health"])
     def health() -> dict[str, str]:
         return {"status": "ok"}
